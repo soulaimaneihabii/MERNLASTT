@@ -1,0 +1,153 @@
+import axios from "axios"
+import { notification } from "antd"
+
+// Create axios instance
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:3001/api",
+  timeout: 10000,
+})
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    console.log("🌐 API Request:", config.method?.toUpperCase(), config.url, config.data || "")
+    return config
+  },
+  (error) => {
+    console.error("🚫 Request interceptor error:", error)
+    return Promise.reject(error)
+  },
+)
+
+// Response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => {
+    console.log("✅ API Response:", response.status, response.config.url, response.data)
+    return response
+  },
+  (error) => {
+    console.error(
+      "❌ API Error:",
+      error.response?.status,
+      error.response?.data,
+      error.config?.url,
+      error.config?.data || "",
+    )
+
+    // Extract the error message for better display
+    const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred"
+
+    if (error.response?.status === 401) {
+      console.log("🔒 Unauthorized - clearing token and redirecting to login")
+      localStorage.removeItem("token")
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login"
+      }
+    }
+
+    if (error.response?.status >= 500) {
+      notification.error({
+        message: "Server Error",
+        description: errorMessage,
+      })
+    }
+
+    // Enhance the error object with a better message
+    error.displayMessage = errorMessage
+    return Promise.reject(error)
+  },
+)
+
+// Auth API - try multiple endpoint patterns to match your backend
+export const authAPI = {
+  login: async (credentials) => {
+    console.log("🔐 Calling login API with:", { email: credentials.email, password: "***" })
+
+    // Try different common login endpoints
+    const endpoints = ["/auth/login", "/auth/signin", "/login", "/api/auth/login"]
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`🔍 Trying login endpoint: ${endpoint}`)
+        const response = await api.post(endpoint, credentials)
+        console.log(`📨 Login success with ${endpoint}:`, response)
+        return response
+      } catch (error) {
+        console.log(`❌ Login failed with ${endpoint}:`, error.response?.status)
+        if (endpoints.indexOf(endpoint) === endpoints.length - 1) {
+          throw error
+        }
+      }
+    }
+  },
+
+  verifyToken: async () => {
+    console.log("🔍 Calling verify token API")
+
+    // Try different token verification endpoints
+    const endpoints = ["/auth/verify", "/auth/validate-token", "/auth/me", "/user/me", "/api/auth/verify"]
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`🔍 Trying verify endpoint: ${endpoint}`)
+        const response = await api.get(endpoint)
+        console.log(`📨 Verify success with ${endpoint}:`, response)
+        return response
+      } catch (error) {
+        console.log(`❌ Verify failed with ${endpoint}:`, error.response?.status)
+        if (endpoints.indexOf(endpoint) === endpoints.length - 1) {
+          throw error
+        }
+      }
+    }
+  },
+
+  logout: () => api.post("/auth/logout"),
+}
+
+// Users API
+export const usersAPI = {
+  getUsers: (params) => api.get("/users", { params }),
+  createUser: (userData) => api.post("/users", userData),
+  createPatientUser: (userData) => api.post("/users/create-patient-user", userData), // 🚀 ajouté ici
+  updateUser: (id, userData) => api.put(`/users/${id}`, userData),
+  deleteUser: (id) => api.delete(`/users/${id}`),
+  getUserById: (id) => api.get(`/users/${id}`),
+}
+
+// Patients API
+export const patientsAPI = {
+  getPatients: (params) => api.get("/patients", { params }),
+  createPatient: (patientData) => api.post("/patients", patientData),
+  updatePatient: (id, patientData) => api.put(`/patients/${id}`, patientData),
+  deletePatient: (id) => api.delete(`/patients/${id}`),
+  getPatientById: (id) => api.get(`/patients/${id}`),
+  exportPatientData: (id) => api.get(`/patients/${id}/export`, { responseType: "blob" }),
+  getPatientByUserId: (userId) => api.get("/patients", { params: { userId } }),
+  getCurrentPatient: () => api.get("/patients/me"),
+  
+
+}
+
+// Predictions API
+export const predictionsAPI = {
+  createPrediction: (predictionData) => api.post("/predictions", predictionData),
+  getPredictions: (params) => api.get("/predictions", { params }),
+  getPredictionHistory: (patientId) => api.get(`/predictions/patient/${patientId}`),
+  getPredictionById: (id) => api.get(`/predictions/${id}`),
+}
+
+// Appointments API
+export const appointmentsAPI = {
+  getAppointments: (params) => api.get("/appointments", { params }),
+  createAppointment: (appointmentData) => api.post("/appointments", appointmentData),
+  updateAppointment: (id, appointmentData) => api.put(`/appointments/${id}`, appointmentData),
+  deleteAppointment: (id) => api.delete(`/appointments/${id}`),
+  getAppointmentById: (id) => api.get(`/appointments/${id}`),
+}
+
+export default api

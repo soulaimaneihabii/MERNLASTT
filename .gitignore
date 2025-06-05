@@ -1,0 +1,55 @@
+# Node (backend)
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/.DS_Store
+backend/logs/
+backend/*.log
+
+# React (frontend)
+frontend/node_modules/
+frontend/.env
+frontend/.env.local
+frontend/.DS_Store
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/.vercel/
+
+# Python (ai-service)
+ai-service/__pycache__/
+ai-service/*.pyc
+ai-service/env/
+ai-service/.env
+ai-service/.DS_Store
+ai-service/.vscode/
+ai-service/.pytest_cache/
+ai-service/.ipynb_checkpoints/
+ai-service/.mypy_cache/
+ai-service/venv/
+ai-service/.idea/
+ai-service/chronic_disease_model.pkl
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific
+*.swp
+*.bak
+*.tmp
+
+# Jupyter notebooks
+**/.ipynb_checkpoints/
+
+# VS Code specific
+*.code-workspace
+node_modules
