@@ -19,6 +19,11 @@ import EnhancedMedicalInformation from "./pages/Doctor/MedicalInformation"
 import PatientAccountCreation from "./pages/Doctor/PatientAccountCreation"
 import PatientMedicalInfo from "./pages/Doctor/PatientMedicalInfo"
 import PatientDetailsPage from "../src/pages/Doctor/PatientDetailsPage"
+import MyPatients from "./pages/Doctor/MyPatients"
+
+
+
+
 const App = () => {
   const dispatch = useDispatch()
   const { isAuthenticated, loading } = useSelector((state) => state.auth)
@@ -83,20 +88,20 @@ const App = () => {
 
               <Route
                 path="doctor/*"
-                element={
-                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
-                    <Routes>
-                      <Route index element={<DoctorDashboard />} />
-                      <Route path="medical-info" element={<MedicalInformation />} />
-                      <Route path="enhanced-medical-info" element={<EnhancedMedicalInformation />} />
-                      <Route path="predictions" element={<Predictions />} />
-                       <Route path="/patients/new" element={<PatientAccountCreation />} />
-                       <Route path="/patients/:id/medical-info" element={<PatientMedicalInfo />} />
-                       <Route path="/patients/:id" element={<PatientDetailsPage />} />
-                    </Routes>
-                  </ProtectedRoute>
-                }
-              />
+  element={
+    <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+      <Routes>
+        <Route index element={<DoctorDashboard />} />
+        <Route path="patients" element={<MyPatients />} />
+        <Route path="patients/new" element={<PatientAccountCreation />} />
+        <Route path="patients/:id" element={<PatientDetailsPage />} />
+        <Route path="patients/:id/medical-info" element={<PatientMedicalInfo />} />
+        <Route path="medical-info" element={<MedicalInformation />} />
+        <Route path="predictions" element={<Predictions />} />
+      </Routes>
+    </ProtectedRoute>
+  }
+/>
 
               <Route
                 path="patient/*"

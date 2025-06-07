@@ -51,14 +51,14 @@ const Layout = () => {
         return [
           ...baseItems,
           {
-            key: "/doctor",
+            key: "/doctor/patients",
             icon: <TeamOutlined />,
             label: "My Patients",
           },
           {
-            key: "/doctor/enhanced-medical-info",
+            key: "/doctor/medical-info",
             icon: <MedicineBoxOutlined />,
-            label: "Enhanced Medical Info",
+            label: "Medical Info",
           },
           {
             key: "/doctor/predictions",

@@ -4,64 +4,69 @@ import websocketService from "../services/websocket.service.js"
 // import notificationService from "../services/notification.service.js"
 import aiService from "../services/ai.service.js"
 import Prediction from "../models/Prediction.model.js"
-
+import PDFDocument from "pdfkit";
 // @desc    Get all patients
 // @route   GET /api/patients
 // @access  Private/Doctor
+// @desc    Get all patients
+// @route   GET /api/patients
+// @access  Private/Admin or Doctor
 export const getPatients = asyncHandler(async (req, res) => {
-  const page = Number.parseInt(req.query.page, 10) || 1
-  const limit = Number.parseInt(req.query.limit, 10) || 10
-  const startIndex = (page - 1) * limit
+  const page = Number.parseInt(req.query.page, 10) || 1;
+  const limit = Number.parseInt(req.query.limit, 10) || 10;
+  const startIndex = (page - 1) * limit;
 
-  // Build filter based on user role and query parameters
-  const filter = {}
+  // Build filter
+  const filter = {};
 
-  // Handle doctorId query parameter
+  // 1️⃣ Role-based filtering
   if (req.query.doctorId) {
-    filter.doctor = req.query.doctorId
+    // Admin or doctor querying a specific doctorId
+    filter.doctor = req.query.doctorId;
   } else if (req.user.role === "doctor") {
-    // If no doctorId specified and user is a doctor, filter by their own patients
-    filter.doctor = req.user.id
+    // Doctor → only their patients
+    filter.doctor = req.user.id;
   }
-  // If user is admin and no doctorId specified, return all patients (no filter)
+  // Admin with no doctorId → return all patients
 
-  // Add search functionality
+  // 2️⃣ Search filter
   if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search, "i")
-    filter.$or = [{ firstName: searchRegex }, { lastName: searchRegex }, { email: searchRegex }]
+    const searchRegex = new RegExp(req.query.search, "i");
+    filter.$or = [
+      { firstName: searchRegex },
+      { lastName: searchRegex },
+      { email: searchRegex },
+    ];
   }
 
-  // Add status filter
+  // 3️⃣ Status filter
   if (req.query.status) {
-    filter.status = req.query.status
+    filter.status = req.query.status;
   }
 
+  // Fetch data
   try {
-    // Get total count for pagination
-    const total = await Patient.countDocuments(filter)
+    const total = await Patient.countDocuments(filter);
 
-    // Get patients with pagination
     const patients = await Patient.find(filter)
-      .populate("doctor", "name email specialization")
+      .populate("doctor", "name email specialization") // ✅ THIS populates doctor correctly
       .sort({ createdAt: -1 })
       .limit(limit)
-      .skip(startIndex)
+      .skip(startIndex);
 
-    // Pagination result
-    const pagination = {}
-
+    // Pagination
+    const pagination = {};
     if (startIndex + limit < total) {
       pagination.next = {
         page: page + 1,
         limit,
-      }
+      };
     }
-
     if (startIndex > 0) {
       pagination.prev = {
         page: page - 1,
         limit,
-      }
+      };
     }
 
     res.status(200).json({
@@ -70,17 +75,16 @@ export const getPatients = asyncHandler(async (req, res) => {
       total,
       pagination,
       data: patients,
-      filter: filter, // Include filter in response for debugging
-    })
+    });
   } catch (error) {
-    console.error("Error fetching patients:", error)
+    console.error("Error fetching patients:", error);
     res.status(500).json({
       success: false,
       message: "Error fetching patients",
       error: error.message,
-    })
+    });
   }
-})
+});
 
 // @desc    Get patient by ID
 // @route   GET /api/patients/:id
@@ -362,93 +366,80 @@ export const deletePatient = asyncHandler(async (req, res) => {
 // @route   GET /api/patients/:id/export
 // @access  Private/Doctor or Admin
 export const exportPatientData = asyncHandler(async (req, res) => {
-  const patient = await Patient.findById(req.params.id).populate("doctor", "name email")
+  const patient = await Patient.findById(req.params.id).populate("doctor", "name email");
 
   if (!patient) {
-    res.status(404)
-    throw new Error("Patient not found")
+    res.status(404);
+    throw new Error("Patient not found");
   }
 
-  // Check if doctor has access to this patient
+  // Check access
   if (req.user.role === "doctor" && patient.doctor._id.toString() !== req.user.id) {
-    res.status(403)
-    throw new Error("Not authorized to export this patient's data")
+    res.status(403);
+    throw new Error("Not authorized to export this patient's data");
   }
 
-  // Get patient's predictions
+  // Get predictions
   const predictions = await Prediction.find({ patient: req.params.id })
     .populate("doctor", "name")
     .sort({ createdAt: -1 })
+    .lean({ virtuals: true }); // ensure virtuals (like riskLevel) are available
 
-  // Prepare export data
-  const exportData = {
-    patient: {
-      id: patient._id,
-      name: patient.fullName,
-      email: patient.email,
-      phone: patient.phone,
-      dateOfBirth: patient.dateOfBirth,
-      age: patient.age,
-      gender: patient.gender,
-      race: patient.race,
-      address: patient.address,
-      emergencyContact: patient.emergencyContact,
-      allergies: patient.allergies,
-      currentMedications: patient.currentMedications,
-      medicalHistory: patient.medicalHistory,
-      medicalFiles: patient.medicalFiles,
-      notes: patient.notes,
-      status: patient.status,
-      doctor: patient.doctor.name,
-      createdAt: patient.createdAt,
-      lastVisit: patient.lastVisit,
-    },
-    medicalData: {
-      diagnoses: {
-        primary: patient.diag_1,
-        secondary: patient.diag_2,
-        tertiary: patient.diag_3,
-      },
-      testResults: {
-        maxGlucoseSerum: patient.max_glu_serum,
-        a1cResult: patient.A1Cresult,
-        insulin: patient.insulin,
-        metformin: patient.metformin,
-        diabetesMed: patient.diabetesMed,
-      },
-      hospitalStats: {
-        timeInHospital: patient.time_in_hospital,
-        labProcedures: patient.num_lab_procedures,
-        procedures: patient.num_procedures,
-        medications: patient.num_medications,
-        outpatientVisits: patient.number_outpatient,
-        emergencyVisits: patient.number_emergency,
-        inpatientVisits: patient.number_inpatient,
-        totalDiagnoses: patient.number_diagnoses,
-      },
-    },
-    predictions: predictions.map((pred) => ({
-      id: pred._id,
-      result: pred.predictionResult,
-      confidence: pred.confidence,
-      diseaseTypes: pred.diseaseTypes,
-      riskFactors: pred.riskFactors,
-      recommendations: pred.recommendations,
-      status: pred.status,
-      notes: pred.notes,
-      doctor: pred.doctor.name,
-      createdAt: pred.createdAt,
-    })),
-    exportedAt: new Date().toISOString(),
-    exportedBy: req.user.name,
+  // Set PDF headers
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=medical-records-${patient.fullName}.pdf`
+  );
+
+  // Create PDF document
+  const doc = new PDFDocument();
+  doc.pipe(res);
+
+  // Patient Info
+  doc.fontSize(20).text(`Medical Records - ${patient.fullName}`, { underline: true });
+  doc.moveDown();
+  doc.fontSize(14).text(`Email: ${patient.email || "N/A"}`);
+  doc.text(`Phone: ${patient.phone || "N/A"}`);
+  doc.text(`DOB: ${patient.dateOfBirth ? patient.dateOfBirth.toDateString() : "N/A"}`);
+  doc.text(`Gender: ${patient.gender || "N/A"}`);
+  doc.text(`Doctor: ${patient.doctor.name}`);
+
+  // Diagnoses
+  doc.moveDown().fontSize(16).text("Diagnoses:");
+  doc.fontSize(14).text(`Primary: ${patient.diag_1 || "N/A"}`);
+  doc.text(`Secondary: ${patient.diag_2 || "N/A"}`);
+  doc.text(`Tertiary: ${patient.diag_3 || "N/A"}`);
+
+  // Predictions
+  doc.moveDown().fontSize(16).text("Predictions:");
+  if (predictions.length === 0) {
+    doc.fontSize(14).text("No predictions found.");
+  } else {
+    predictions.forEach((pred, index) => {
+      doc.moveDown().fontSize(14).text(`Prediction #${index + 1}:`);
+      doc.text(`Result: ${pred.predictionResult}`);
+      doc.text(`Risk Level: ${pred.riskLevel || "N/A"}`);
+      doc.text(`Confidence: ${(pred.confidence * 100).toFixed(1)}%`);
+      doc.text(`Disease Types: ${pred.diseaseTypes && pred.diseaseTypes.length > 0 ? pred.diseaseTypes.join(", ") : "N/A"}`);
+      doc.text(`Recommendations:`);
+      if (pred.recommendations && pred.recommendations.length > 0) {
+        pred.recommendations.forEach((rec) => {
+          doc.text(`  • ${rec}`);
+        });
+      } else {
+        doc.text("  N/A");
+      }
+      doc.text(`Doctor: ${pred.doctor.name}`);
+      doc.text(`Status: ${pred.status}`);
+      doc.text(`Created At: ${new Date(pred.createdAt).toDateString()}`);
+    });
   }
 
-  res.status(200).json({
-    success: true,
-    data: exportData,
-    message: "Patient data exported successfully",
-  })
-})
+  // Finalize PDF
+  doc.end();
+});
+
 
 // @desc    Validate patient data for AI prediction
 // @route   GET /api/patients/:id/validate-prediction-data

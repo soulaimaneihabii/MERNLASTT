@@ -89,14 +89,12 @@ export const getSinglePrediction = asyncHandler(async (req, res) => {
 export const createPrediction = asyncHandler(async (req, res) => {
   const { patientId, medicalData, notes } = req.body;
 
-  // Find the patient
   const patient = await Patient.findById(patientId);
   if (!patient) {
     res.status(404);
     throw new Error("Patient not found");
   }
 
-  // Check if doctor has access to this patient
   if (req.user.role === "doctor" && patient.doctor.toString() !== req.user.id) {
     res.status(403);
     throw new Error("Not authorized to create prediction for this patient");
@@ -105,31 +103,30 @@ export const createPrediction = asyncHandler(async (req, res) => {
   console.log("🚀 Sending to Flask:", medicalData);
 
   try {
-    // Call Flask AI service
     const aiPrediction = await aiService.getPredictionFromFlask(medicalData);
 
     console.log("✅ AI Prediction:", aiPrediction);
 
-    // Create prediction record
     const prediction = await Prediction.create({
       patient: patientId,
       doctor: req.user.id,
-      predictionResult: aiPrediction.risk_level,  // now enum matches ["High", "Moderate", "Low", "No"]
-      diseaseTypes: aiPrediction.chronic_disease_types || [],  // array of strings
+      result: {
+        risk: aiPrediction.risk_level?.toLowerCase() || "unknown",  // ✅ compatible with PatientDashboard
+        score: aiPrediction.score || 0.8,  // optional fallback
+      },
       confidence: aiPrediction.confidence,
-      riskFactors: [],  // optional, can enhance later
+      diseaseTypes: aiPrediction.chronic_disease_types || [],
       recommendations: aiPrediction.recommendations || [],
       notes: notes || "",
       status: "pending",
       metadata: {
-        aiServiceVersion: "1.0.0",  // or from aiPrediction if available
-        modelVersion: "1.0.0",      // optional
-        processingTime: 0,          // optional
-        inputDataHash: "",          // optional
+        aiServiceVersion: "1.0.0",
+        modelVersion: "1.0.0",
+        processingTime: 0,
+        inputDataHash: "",
       },
     });
 
-    // Populate for response
     await prediction.populate("patient", "firstName lastName age email");
     await prediction.populate("doctor", "name email");
 
@@ -144,7 +141,6 @@ export const createPrediction = asyncHandler(async (req, res) => {
     throw new Error(`Failed to create prediction: ${error.message}`);
   }
 });
-
 
 
 // @desc    Get prediction history for a patient
@@ -170,14 +166,19 @@ export const getPredictionHistory = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to access this patient's predictions");
   }
 
-  // 🚀 Check if patient is trying to access their own predictions
-  // Assumes Patient model has `userId` field linked to User._id
-  if (req.user.role === "patient" && patient.userId.toString() !== req.user.id) {
-    res.status(403);
-    throw new Error("You can only access your own predictions");
+  // Check if patient is trying to access their own predictions
+  if (req.user.role === "patient") {
+    if (!patient.user) {
+      res.status(403);
+      throw new Error("Patient record is not linked to your account.");
+    }
+    if (patient.user.toString() !== req.user.id) {
+      res.status(403);
+      throw new Error("You can only access your own predictions.");
+    }
   }
 
-  // Get all predictions for this patient
+  // Get predictions
   const predictions = await Prediction.find({ patient: patientId })
     .populate("doctor", "name email")
     .sort({ createdAt: -1 });
@@ -188,7 +189,6 @@ export const getPredictionHistory = asyncHandler(async (req, res) => {
     data: predictions,
   });
 });
-
 
 // @desc    Update prediction
 // @route   PUT /api/predictions/:id

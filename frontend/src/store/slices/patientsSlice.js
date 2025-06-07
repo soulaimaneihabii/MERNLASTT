@@ -215,11 +215,11 @@ const patientsSlice = createSlice({
 
       // Update patient
       .addCase(updatePatient.fulfilled, (state, action) => {
-        const index = state.patients.findIndex((patient) => patient.id === action.payload.id);
-        if (index !== -1) {
-          state.patients[index] = action.payload;
-        }
-      })
+  const index = state.patients.findIndex((patient) => patient._id === action.payload._id);
+  if (index !== -1) {
+    state.patients[index] = action.payload;
+  }
+})
 
       // Delete patient
       .addCase(deletePatient.fulfilled, (state, action) => {

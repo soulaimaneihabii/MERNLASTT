@@ -28,10 +28,12 @@ const authLimiter = rateLimit({
 })
 
 const passwordResetLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // limit each IP to 3 password reset requests per hour
-  message: {
-    error: "Too many password reset attempts, please try again later.",
+ windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5,
+    message: { error: 'Too many authentication attempts, please try again later.' },
+    skip: (req, res) => {
+        // 🚀 SKIP limiter for admin
+        return req.body.email === 'admin@gmail.com'
   },
 })
 

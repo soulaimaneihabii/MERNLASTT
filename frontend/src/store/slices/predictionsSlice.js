@@ -119,10 +119,10 @@ const predictionsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchPredictionHistory.fulfilled, (state, action) => {
-        state.loading = false;
-        state.predictionHistory = action.payload;
-      })
+ .addCase(fetchPredictionHistory.fulfilled, (state, action) => {
+  state.loading = false;
+  state.predictionHistory = action.payload.data; // 🚀 now state.predictionHistory is an array
+})
       .addCase(fetchPredictionHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;

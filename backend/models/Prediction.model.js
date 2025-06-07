@@ -12,51 +12,77 @@ const predictionSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Prediction must be created by a doctor"],
     },
+
+    // ✅ Add result field for PatientDashboard compatibility
+    result: {
+      risk: {
+        type: String,
+        enum: ["low", "medium", "high", "unknown"],
+        required: true,
+      },
+      score: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 1,
+      },
+    },
+
+    // Keep your original fields (BACKWARD COMPATIBLE) ✅
     predictionResult: {
       type: String,
       required: [true, "Prediction result is required"],
-      enum: ["High", "Moderate", "Low", "No"],  // MATCH AI!
+      enum: ["High", "Moderate", "Low", "No"], // matches AI
     },
+
     diseaseTypes: [
       {
         type: String,
         trim: true,
       },
     ],
+
     confidence: {
       type: Number,
       required: [true, "Confidence score is required"],
       min: [0, "Confidence cannot be negative"],
       max: [1, "Confidence cannot be greater than 1"],
     },
+
     riskFactors: [
       {
         type: String,
         trim: true,
       },
     ],
+
     recommendations: [
       {
         type: String,
         trim: true,
       },
     ],
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "rejected", "under_review"],
       default: "pending",
     },
+
     notes: {
       type: String,
       maxlength: [1000, "Notes cannot be more than 1000 characters"],
     },
+
     confirmedBy: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
     },
+
     confirmedAt: {
       type: Date,
     },
+
     metadata: {
       modelVersion: {
         type: String,
@@ -73,18 +99,22 @@ const predictionSchema = new mongoose.Schema(
         type: String,
       },
     },
+
     followUpRequired: {
       type: Boolean,
       default: false,
     },
+
     followUpDate: {
       type: Date,
     },
+
     severity: {
       type: String,
       enum: ["low", "medium", "high", "critical"],
       default: "medium",
     },
+
     isArchived: {
       type: Boolean,
       default: false,
@@ -163,7 +193,6 @@ predictionSchema.pre("save", function (next) {
   if (this.isNew && this.predictionResult === "High") {
     this.followUpRequired = true;
     if (!this.followUpDate) {
-      // Set follow-up date to 7 days from now for High
       const daysToAdd = 7;
       this.followUpDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
     }

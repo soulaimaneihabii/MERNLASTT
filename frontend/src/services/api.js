@@ -104,19 +104,45 @@ export const usersAPI = {
   getUserById: (id) => api.get(`/users/${id}`),
 }
 
-// Patients API
 export const patientsAPI = {
-  getPatients: (params) => api.get("/patients", { params }),
+  // GET /patients — supports: doctorId, userId (optional)
+  getPatients: (params = {}) => api.get("/patients", { params }),
+
+  // POST /patients — create new patient
   createPatient: (patientData) => api.post("/patients", patientData),
+
+  // PUT /patients/:id — update patient
   updatePatient: (id, patientData) => api.put(`/patients/${id}`, patientData),
+
+  // DELETE /patients/:id — delete patient
   deletePatient: (id) => api.delete(`/patients/${id}`),
+
+  // GET /patients/:id — get patient by ID
   getPatientById: (id) => api.get(`/patients/${id}`),
+
+  // GET /patients/:id/export — export patient data
   exportPatientData: (id) => api.get(`/patients/${id}/export`, { responseType: "blob" }),
+
+  // GET /patients?userId= — for fetchCurrentPatient
   getPatientByUserId: (userId) => api.get("/patients", { params: { userId } }),
+
+  // GET /patients/me — for patient role
   getCurrentPatient: () => api.get("/patients/me"),
+};
+
+// Patients API
+// export const patientsAPI = {
+//   getPatients: (params) => api.get("/patients", { params }),
+//   createPatient: (patientData) => api.post("/patients", patientData),
+//   updatePatient: (id, patientData) => api.put(`/patients/${id}`, patientData),
+//   deletePatient: (id) => api.delete(`/patients/${id}`),
+//   getPatientById: (id) => api.get(`/patients/${id}`),
+//   exportPatientData: (id) => api.get(`/patients/${id}/export`, { responseType: "blob" }),
+//   getPatientByUserId: (userId) => api.get("/patients", { params: { userId } }),
+//   getCurrentPatient: () => api.get("/patients/me"),
   
 
-}
+// }
 
 // Predictions API
 export const predictionsAPI = {

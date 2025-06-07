@@ -300,7 +300,7 @@ router.delete("/:id", protect, authorize("admin"), deletePatient)
  *       401:
  *         description: Not authorized
  */
-router.get("/:id/export", protect, authorize("doctor", "admin"), exportPatientData)
+router.get("/:id/export", protect, authorize("doctor", "admin","patient"), exportPatientData)
 
 /**
  * @swagger

@@ -35,6 +35,8 @@ import {
   BarChartOutlined,
 } from "@ant-design/icons"
 import { fetchPatients, updatePatient } from "../../store/slices/patientsSlice"
+import { getAISuggestions } from "../../services/aiAssistantService";
+
 import dayjs from "dayjs"
 
 const { Title, Text } = Typography
@@ -56,13 +58,52 @@ const MedicalInformation = () => {
   const [medicalHistory, setMedicalHistory] = useState([])
   const [newAllergy, setNewAllergy] = useState("")
   const [activeTab, setActiveTab] = useState("basic")
-
+const [aiLoading, setAiLoading] = useState(false);
   useEffect(() => {
     if (user?.id) {
       dispatch(fetchPatients({ doctorId: user.id }))
     }
   }, [dispatch, user?.id])
+  //ai assisstance
+const handleAISuggestions = async () => {
+  if (!selectedPatient) {
+    notification.warning({
+      message: "No Patient Selected",
+      description: "Please select a patient first.",
+    });
+    return;
+  }
 
+  try {
+    setAiLoading(true);
+
+    const aiResponse = await getAISuggestions(selectedPatient.id);
+
+    if (aiResponse?.suggestedFields) {
+      form.setFieldsValue({
+        ...aiResponse.suggestedFields,
+      });
+
+      notification.success({
+        message: "AI Suggestions Applied",
+        description: "Fields were auto-filled from AI.",
+      });
+    } else {
+      notification.warning({
+        message: "No AI Suggestions",
+        description: "AI returned no suggestions.",
+      });
+    }
+  } catch (error) {
+    console.error("AI suggestion error:", error);
+    notification.error({
+      message: "AI Suggestion Failed",
+      description: error.message || "Failed to fetch AI suggestions.",
+    });
+  } finally {
+    setAiLoading(false);
+  }
+};
   const handlePatientSelect = (patientId) => {
     const patient = patients.find((p) => p.id === patientId)
     setSelectedPatient(patient)
@@ -352,7 +393,9 @@ const MedicalInformation = () => {
                 <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveMedicalInfo} loading={loading}>
                   Save Medical Information
                 </Button>
+                
               }
+              
             >
               <Tabs activeKey={activeTab} onChange={setActiveTab}>
                 <TabPane tab="Basic Information" key="basic" icon={<UserOutlined />}>
@@ -657,6 +700,7 @@ const MedicalInformation = () => {
   >
     Submit All Medical Data
   </Button>
+ 
 </TabPane>
 
               </Tabs>
