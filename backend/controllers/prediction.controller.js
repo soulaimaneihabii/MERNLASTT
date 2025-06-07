@@ -91,7 +91,6 @@ export const createPrediction = asyncHandler(async (req, res) => {
 
   // Find the patient
   const patient = await Patient.findById(patientId);
-
   if (!patient) {
     res.status(404);
     throw new Error("Patient not found");
@@ -103,25 +102,34 @@ export const createPrediction = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to create prediction for this patient");
   }
 
+  console.log("🚀 Sending to Flask:", medicalData);
+
   try {
-    // ✅ Send to Flask AI service!
+    // Call Flask AI service
     const aiPrediction = await aiService.getPredictionFromFlask(medicalData);
+
+    console.log("✅ AI Prediction:", aiPrediction);
 
     // Create prediction record
     const prediction = await Prediction.create({
       patient: patientId,
       doctor: req.user.id,
-      predictionResult: aiPrediction.prediction,
-      riskLevel: aiPrediction.risk_level,
-      diseaseTypes: aiPrediction.chronic_disease_types,
+      predictionResult: aiPrediction.risk_level,  // now enum matches ["High", "Moderate", "Low", "No"]
+      diseaseTypes: aiPrediction.chronic_disease_types || [],  // array of strings
       confidence: aiPrediction.confidence,
-      recommendations: aiPrediction.recommendations,
-      probabilityScores: aiPrediction.probability_scores,
+      riskFactors: [],  // optional, can enhance later
+      recommendations: aiPrediction.recommendations || [],
       notes: notes || "",
       status: "pending",
+      metadata: {
+        aiServiceVersion: "1.0.0",  // or from aiPrediction if available
+        modelVersion: "1.0.0",      // optional
+        processingTime: 0,          // optional
+        inputDataHash: "",          // optional
+      },
     });
 
-    // Populate the prediction
+    // Populate for response
     await prediction.populate("patient", "firstName lastName age email");
     await prediction.populate("doctor", "name email");
 
@@ -136,6 +144,7 @@ export const createPrediction = asyncHandler(async (req, res) => {
     throw new Error(`Failed to create prediction: ${error.message}`);
   }
 });
+
 
 
 // @desc    Get prediction history for a patient

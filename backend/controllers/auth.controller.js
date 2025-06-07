@@ -64,56 +64,66 @@ export const register = asyncHandler(async (req, res) => {
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
 export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body
+  const { email, password } = req.body;
 
   // Validate email & password
   if (!email || !password) {
-    res.status(400)
-    throw new Error("Please provide an email and password")
+    res.status(400);
+    throw new Error("Please provide an email and password");
   }
 
   // Check for user
-  const user = await User.findOne({ email }).select("+password")
+  const user = await User.findOne({ email }).select("+password");
 
   if (!user) {
-    res.status(401)
-    throw new Error("Invalid credentials")
+    res.status(401);
+    throw new Error("Invalid credentials");
   }
 
-  // Check if account is locked
-  if (user.isLocked) {
-    res.status(423)
-    throw new Error("Account temporarily locked due to too many failed login attempts")
+  // Check if account is locked (except admin)
+  if (user.role !== "admin" && user.isLocked) {
+    res.status(423);
+    throw new Error("Account temporarily locked due to too many failed login attempts");
   }
 
   // Check if user is active
   if (!user.isActive) {
-    res.status(401)
-    throw new Error("Account is deactivated. Please contact administrator.")
+    res.status(401);
+    throw new Error("Account is deactivated. Please contact administrator.");
+  }
+
+  // Protect against brute-force (except admin)
+  if (user.role !== "admin" && user.loginAttempts > 5) {
+    res.status(429);
+    throw new Error("Too many authentication attempts, please try again later.");
   }
 
   // Check if password matches
-  const isMatch = await user.matchPassword(password)
+  const isMatch = await user.matchPassword(password);
 
   if (!isMatch) {
     // Increment login attempts
-    await user.incLoginAttempts()
-    res.status(401)
-    throw new Error("Invalid credentials")
+    await user.incLoginAttempts();
+    res.status(401);
+    throw new Error("Invalid credentials");
   }
 
   // Reset login attempts on successful login
   if (user.loginAttempts > 0) {
-    await user.resetLoginAttempts()
+    await user.resetLoginAttempts();
   }
 
   // Update last login
-  user.lastLogin = new Date()
-  await user.save({ validateBeforeSave: false })
+  user.lastLogin = new Date();
+  await user.save({ validateBeforeSave: false });
 
-  sendTokenResponse(user, 200, res, "Login successful")
-})
+  // Send token response
+  sendTokenResponse(user, 200, res, "Login successful");
+});
 
 // @desc    Log user out / clear cookie
 // @route   POST /api/auth/logout

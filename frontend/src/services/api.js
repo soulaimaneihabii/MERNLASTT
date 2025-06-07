@@ -65,49 +65,34 @@ api.interceptors.response.use(
 // Auth API - try multiple endpoint patterns to match your backend
 export const authAPI = {
   login: async (credentials) => {
-    console.log("🔐 Calling login API with:", { email: credentials.email, password: "***" })
+    console.log("🔐 Calling login API with:", { email: credentials.email, password: "***" });
 
-    // Try different common login endpoints
-    const endpoints = ["/auth/login", "/auth/signin", "/login", "/api/auth/login"]
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`🔍 Trying login endpoint: ${endpoint}`)
-        const response = await api.post(endpoint, credentials)
-        console.log(`📨 Login success with ${endpoint}:`, response)
-        return response
-      } catch (error) {
-        console.log(`❌ Login failed with ${endpoint}:`, error.response?.status)
-        if (endpoints.indexOf(endpoint) === endpoints.length - 1) {
-          throw error
-        }
-      }
+    try {
+      const response = await api.post("/auth/login", credentials);
+      console.log("✅ Login success:", response);
+      return response;
+    } catch (error) {
+      console.log("❌ Login failed:", error.response?.status, error.displayMessage);
+      throw error;
     }
   },
 
   verifyToken: async () => {
-    console.log("🔍 Calling verify token API")
+    console.log("🔍 Calling verify token API");
 
-    // Try different token verification endpoints
-    const endpoints = ["/auth/verify", "/auth/validate-token", "/auth/me", "/user/me", "/api/auth/verify"]
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`🔍 Trying verify endpoint: ${endpoint}`)
-        const response = await api.get(endpoint)
-        console.log(`📨 Verify success with ${endpoint}:`, response)
-        return response
-      } catch (error) {
-        console.log(`❌ Verify failed with ${endpoint}:`, error.response?.status)
-        if (endpoints.indexOf(endpoint) === endpoints.length - 1) {
-          throw error
-        }
-      }
+    try {
+      const response = await api.get("/auth/verify");
+      console.log("✅ Verify success:", response);
+      return response;
+    } catch (error) {
+      console.log("❌ Verify failed:", error.response?.status, error.displayMessage);
+      throw error;
     }
   },
 
   logout: () => api.post("/auth/logout"),
-}
+};
+
 
 // Users API
 export const usersAPI = {

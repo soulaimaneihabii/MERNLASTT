@@ -71,12 +71,6 @@ export const getPredictionFromFlask = async (medicalData) => {
             ...medicalData
         }
 
-        // PATCH field: A1Cresult → A1C_result
-        if (payload.A1Cresult !== undefined) {
-            payload.A1C_result = payload.A1Cresult
-            delete payload.A1Cresult
-        }
-
         // PATCH diabetesMed → backend expects 0/1
         if (payload.diabetesMed !== undefined) {
             if (String(payload.diabetesMed).toLowerCase() === "yes") {
@@ -101,12 +95,14 @@ export const getPredictionFromFlask = async (medicalData) => {
         }
 
         console.log("AI service response:", response.data)
-        return response
+        return response.data
     } catch (error) {
         console.error("AI service error:", error.message)
         throw new Error(`AI service error: ${error.message}`)
     }
 }
+
+
 
 
 /**

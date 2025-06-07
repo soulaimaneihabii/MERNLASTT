@@ -72,7 +72,7 @@ const PatientAccountCreation = () => {
           description: 'Patient account has been successfully created.',
         });
 
-        navigate(`/patients/${patientResult._id}/medical-info`);
+        navigate("/doctor");
       }
 
     } catch (error) {

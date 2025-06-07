@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Card,
   Select,
@@ -14,78 +14,128 @@ import {
   Tag,
   Space,
   Modal,
-  Statistic,
   Progress,
-} from "antd"
-import { ExperimentOutlined, RocketOutlined, EyeOutlined } from "@ant-design/icons"
-import { fetchPatients } from "../../store/slices/patientsSlice"
-import { createPrediction, fetchPredictions } from "../../store/slices/predictionsSlice"
+} from "antd";
+import { RocketOutlined, EyeOutlined } from "@ant-design/icons";
+import { fetchPatients } from "../../store/slices/patientsSlice";
+import { createPrediction, fetchPredictions } from "../../store/slices/predictionsSlice";
+import { Pie } from "@ant-design/plots";
 
-const { Title, Text } = Typography
-const { Option } = Select
+const { Title, Text } = Typography;
+const { Option } = Select;
+
+const isPatientReadyForAI = (p) =>
+  p.age !== undefined &&
+  p.gender &&
+  p.race &&
+  p.diag_1 &&
+  p.time_in_hospital !== undefined &&
+  p.num_lab_procedures !== undefined &&
+  p.num_procedures !== undefined &&
+  p.num_medications !== undefined;
+
+const buildMedicalData = (p) => ({
+  age: p.age,
+  gender: p.gender,
+  race: p.race,
+  diag_1: p.diag_1,
+  diag_2: p.diag_2,
+  diag_3: p.diag_3,
+  max_glu_serum: p.max_glu_serum,
+  A1Cresult: p.A1Cresult || p.A1C_result || "",
+  insulin: p.insulin,
+  metformin: p.metformin,
+  diabetesMed: p.diabetesMed === 1 ? "Yes" : "No",
+  time_in_hospital: p.time_in_hospital,
+  num_lab_procedures: p.num_lab_procedures,
+  num_procedures: p.num_procedures,
+  num_medications: p.num_medications,
+  number_outpatient: p.number_outpatient,
+  number_emergency: p.number_emergency,
+  number_inpatient: p.number_inpatient,
+  number_diagnoses: p.number_diagnoses,
+});
 
 const Predictions = () => {
-  const dispatch = useDispatch()
-  const { patients = [] } = useSelector((state) => state.patients)
-  const { predictions = [], loading } = useSelector((state) => state.predictions)
-  const { user } = useSelector((state) => state.auth)
+  const dispatch = useDispatch();
+  const { patients = [] } = useSelector((state) => state.patients);
+  const { predictions = [], loading } = useSelector((state) => state.predictions);
+  const { user } = useSelector((state) => state.auth);
 
-  const [selectedPatient, setSelectedPatient] = useState(null)
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [predictionResult, setPredictionResult] = useState(null)
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [predictionResult, setPredictionResult] = useState(null);
+  const [aiServiceStatus, setAiServiceStatus] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
-      dispatch(fetchPatients({ doctorId: user.id }))
-      dispatch(fetchPredictions({ doctorId: user.id }))
+      dispatch(fetchPatients({ doctorId: user.id }));
+      dispatch(fetchPredictions({ doctorId: user.id }));
     }
-  }, [dispatch, user?.id])
+  }, [dispatch, user?.id]);
+
+  useEffect(() => {
+    const checkAIService = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/health");
+        const data = await response.json();
+        setAiServiceStatus(data.model_loaded);
+      } catch (error) {
+        setAiServiceStatus(false);
+      }
+    };
+
+    checkAIService();
+    const interval = setInterval(checkAIService, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handlePatientSelect = (patientId) => {
-    const patient = patients.find((p) => p.id === patientId)
-    setSelectedPatient(patient)
-  }
+    const patient = patients.find((p) => p.id === patientId);
+    setSelectedPatient(patient);
+  };
 
   const handleRunPrediction = async () => {
-    if (!selectedPatient || !selectedPatient.medicalData) {
+    if (!selectedPatient) {
       notification.warning({
         message: "Warning",
         description: "Please select a patient with complete medical information.",
-      })
-      return
+      });
+      return;
     }
 
-    try {
-      console.log("Sending AI prediction with data:", selectedPatient.medicalData)
+    const medicalData = buildMedicalData(selectedPatient);
 
+    console.log("Sending AI prediction with data:", medicalData);
+
+    try {
       const result = await dispatch(
         createPrediction({
           patientId: selectedPatient.id,
-          medicalData: selectedPatient.medicalData,
+          medicalData,
           doctorId: user.id,
         })
-      ).unwrap()
+      ).unwrap();
 
-      console.log("Prediction created successfully:", result)
+      console.log("Prediction created successfully:", result);
 
-      setPredictionResult(result.data)
-      setIsModalVisible(true)
+      setPredictionResult(result.data);
+      setIsModalVisible(true);
 
       notification.success({
         message: "Success",
         description: "AI prediction created successfully.",
-      })
+      });
 
-      // Refresh predictions
-      dispatch(fetchPredictions({ doctorId: user.id }))
+      dispatch(fetchPredictions({ doctorId: user.id }));
     } catch (error) {
-      console.error("Prediction error:", error)
+      console.error("Prediction error:", error);
       notification.error({
         message: "Error",
         description: `Failed to create prediction: ${error.message}`,
-      })
+      });
     }
-  }
+  };
 
   const columns = [
     {
@@ -107,8 +157,8 @@ const Predictions = () => {
       key: "riskLevel",
       render: (risk) => {
         const color =
-          risk === "High" ? "red" : risk === "Moderate" ? "orange" : "green"
-        return <Tag color={color}>{risk || "Unknown"}</Tag>
+          risk === "High" ? "red" : risk === "Moderate" ? "orange" : "green";
+        return <Tag color={color}>{risk || "Unknown"}</Tag>;
       },
     },
     {
@@ -138,8 +188,9 @@ const Predictions = () => {
             type="link"
             icon={<EyeOutlined />}
             onClick={() => {
-              setPredictionResult(record)
-              setIsModalVisible(true)
+              console.log("View details record:", record);
+              setPredictionResult(record);
+              setIsModalVisible(true);
             }}
           >
             View Details
@@ -147,7 +198,12 @@ const Predictions = () => {
         </Space>
       ),
     },
-  ]
+  ];
+
+  const riskDistributionData = ["High", "Moderate", "Low"].map((riskLevel) => ({
+    type: riskLevel,
+    value: predictions.filter((p) => p.riskLevel === riskLevel).length,
+  }));
 
   return (
     <div>
@@ -156,9 +212,14 @@ const Predictions = () => {
         Generate and analyze chronic disease risk predictions for your patients.
       </Text>
 
-      {/* Generate Prediction */}
-      <Row gutter={16} style={{ marginTop: 24 }}>
-        <Col span={12}>
+      <div style={{ marginTop: 12 }}>
+        <Tag color={aiServiceStatus ? "green" : "red"}>
+          AI Service: {aiServiceStatus ? "Running" : "Not Available"}
+        </Tag>
+      </div>
+
+      <Row gutter={16} style={{ marginTop: 24 }} wrap>
+        <Col xs={24} md={12}>
           <Card title="Generate New Prediction" extra={<RocketOutlined />}>
             <Space direction="vertical" style={{ width: "100%" }}>
               <Select
@@ -168,7 +229,7 @@ const Predictions = () => {
                 size="large"
               >
                 {patients
-                  .filter((p) => p.medicalData)
+                  .filter(isPatientReadyForAI)
                   .map((p) => (
                     <Option key={p.id} value={p.id}>
                       {p.firstName || ""} {p.lastName || ""} - {p.email}
@@ -179,11 +240,12 @@ const Predictions = () => {
               {selectedPatient && (
                 <div style={{ background: "#f5f5f5", padding: 12 }}>
                   <Text strong>Selected Patient:</Text> <br />
-                  <Text>{selectedPatient.firstName || ""} {selectedPatient.lastName || ""}</Text>
-                  <br />
-                  <Text type="secondary">
-                    Ready for AI: ✅
+                  <Text>
+                    {selectedPatient.firstName || ""}{" "}
+                    {selectedPatient.lastName || ""}
                   </Text>
+                  <br />
+                  <Text type="secondary">Ready for AI: ✅</Text>
                 </div>
               )}
 
@@ -192,7 +254,9 @@ const Predictions = () => {
                 icon={<RocketOutlined />}
                 size="large"
                 onClick={handleRunPrediction}
-                disabled={!selectedPatient || !selectedPatient.medicalData}
+                disabled={
+                  !selectedPatient || !isPatientReadyForAI(selectedPatient)
+                }
                 loading={loading}
               >
                 Generate AI Prediction
@@ -201,16 +265,31 @@ const Predictions = () => {
           </Card>
         </Col>
 
-        <Col span={12}>
+        <Col xs={24} md={12}>
           <Card title="Risk Distribution">
-            <div style={{ textAlign: "center", padding: 40 }}>
-              <Text type="secondary">No predictions yet</Text>
-            </div>
+            {predictions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 40 }}>
+                <Text type="secondary">No predictions yet</Text>
+              </div>
+            ) : (
+              <Pie
+                data={riskDistributionData}
+                angleField="value"
+                colorField="type"
+                radius={0.9}
+                label={{
+                 
+                  labelHeight: 28,
+                  content: ({ type, value, percent }) =>
+                    `${type} (${value}) - ${Math.round(percent * 100)}%`,
+                }}
+                interactions={[{ type: "element-active" }]}
+              />
+            )}
           </Card>
         </Col>
       </Row>
 
-      {/* Predictions History */}
       <Card title="Prediction History" style={{ marginTop: 24 }}>
         <Table
           columns={columns}
@@ -226,7 +305,6 @@ const Predictions = () => {
         />
       </Card>
 
-      {/* Prediction Result Modal */}
       <Modal
         title="Prediction Result"
         open={isModalVisible}
@@ -240,7 +318,7 @@ const Predictions = () => {
         {predictionResult && (
           <div>
             <p>
-              <strong>Risk Level:</strong> {predictionResult.riskLevel}
+              <strong>Risk Level:</strong> {predictionResult.predictionResult}
             </p>
             <p>
               <strong>Confidence:</strong>{" "}
@@ -248,21 +326,27 @@ const Predictions = () => {
             </p>
             <p>
               <strong>Disease Types:</strong>{" "}
-              {predictionResult.diseaseTypes?.join(", ") || "None"}
+              {predictionResult.diseaseTypes?.length > 0
+                ? predictionResult.diseaseTypes.join(", ")
+                : "None"}
             </p>
             <p>
               <strong>Recommendations:</strong>
             </p>
             <ul>
-              {predictionResult.recommendations?.map((rec, index) => (
-                <li key={index}>{rec}</li>
-              ))}
+              {predictionResult.recommendations?.length > 0 ? (
+                predictionResult.recommendations.map((rec, index) => (
+                  <li key={index}>{rec}</li>
+                ))
+              ) : (
+                <li>No recommendations</li>
+              )}
             </ul>
           </div>
         )}
       </Modal>
     </div>
-  )
-}
+  );
+};
 
-export default Predictions
+export default Predictions;

@@ -19,13 +19,13 @@ except Exception as e:
 
 # Mapping chronic disease codes to names
 chronic_diag_map = {
-    '250': 'Diabetes',
-    '414': 'Heart Disease', 
-    '428': 'Heart Failure',
-    '585': 'Kidney Failure',
-    '272': 'Cholesterol'
+    'E11': 'Diabetes',
+    'E10': 'Diabetes',
+    'I10': 'Hypertension',
+    'I25': 'Heart Disease',
+    'N18': 'Kidney Disease',
+    'J44': 'COPD'
 }
-
 def get_chronic_disease_types(patient_data):
     """Extract chronic disease types from diagnosis codes"""
     diseases = set()
@@ -36,10 +36,7 @@ def get_chronic_disease_types(patient_data):
             if code in chronic_diag_map:
                 diseases.add(chronic_diag_map[code])
     
-    if diseases:
-        return list(sorted(diseases))
-    else:
-        return []
+    return list(sorted(diseases)) if diseases else []
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -69,23 +66,14 @@ def predict():
                 'success': False
             }), 400
 
-        # === PATCH 1 — Rename fields if needed ===
-        rename_map = {
-            'A1Cresult': 'A1C_result',
-        }
-
-        for old_name, new_name in rename_map.items():
-            if old_name in patient_data:
-                patient_data[new_name] = patient_data.pop(old_name)
-
-        # === PATCH 2 — Convert diabetesMed to 0/1 ===
+        # === PATCH — Convert diabetesMed to 0/1 ===
         if 'diabetesMed' in patient_data:
             if str(patient_data['diabetesMed']).lower() in ['yes', '1', 'true']:
                 patient_data['diabetesMed'] = 1
             else:
                 patient_data['diabetesMed'] = 0
 
-        # === PATCH 3 — Convert numerical fields ===
+        # === PATCH — Convert numerical fields ===
         int_fields = [
             'time_in_hospital',
             'number_inpatient',
@@ -112,11 +100,10 @@ def predict():
         if hasattr(model, 'feature_names_in_'):
             print("Model expects:", model.feature_names_in_)
 
-        # OPTIONAL: reorder columns to match model
-        if hasattr(model, 'feature_names_in_'):
+            # OPTIONAL: reorder columns to match model
             df = df[model.feature_names_in_]
 
-        # === Now make prediction ===
+        # === Make prediction ===
         prediction = model.predict(df)[0]
         prediction_proba = model.predict_proba(df)[0]
 
@@ -165,7 +152,6 @@ def predict():
             'error': f'Prediction failed: {str(e)}',
             'success': False
         }), 500
-
 
 def generate_recommendations(prediction, disease_types, confidence):
     """Generate medical recommendations based on prediction"""

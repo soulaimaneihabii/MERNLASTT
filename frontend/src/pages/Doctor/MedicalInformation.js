@@ -623,28 +623,42 @@ const MedicalInformation = () => {
                   </Form>
                 </TabPane>
 
-                <TabPane tab="Medical Files" key="files" icon={<UploadOutlined />}>
-                  <Title level={4}>Upload Medical Files</Title>
-                  <Upload
-                    multiple
-                    fileList={fileList}
-                    onChange={handleFileUpload}
-                    beforeUpload={() => false}
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  >
-                    <Button icon={<UploadOutlined />}>Upload Files</Button>
-                  </Upload>
+            <TabPane tab="Medical Files" key="files" icon={<UploadOutlined />}>
+  <Title level={4}>Upload Medical Files</Title>
+  <Upload
+    multiple
+    fileList={fileList}
+    onChange={handleFileUpload}
+    beforeUpload={() => false}
+    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+  >
+    <Button icon={<UploadOutlined />}>Upload Files</Button>
+  </Upload>
 
-                  {medicalFiles.length > 0 && (
-                    <Table
-                      columns={fileColumns}
-                      dataSource={medicalFiles}
-                      rowKey="uid"
-                      style={{ marginTop: 16 }}
-                      pagination={false}
-                    />
-                  )}
-                </TabPane>
+  {medicalFiles.length > 0 && (
+    <Table
+      columns={fileColumns}
+      dataSource={medicalFiles}
+      rowKey="uid"
+      style={{ marginTop: 16 }}
+      pagination={false}
+    />
+  )}
+
+  <Divider />
+
+  <Button
+    type="primary"
+    size="large"
+    icon={<SaveOutlined />}
+    onClick={handleSaveMedicalInfo}
+    loading={loading}
+    block
+  >
+    Submit All Medical Data
+  </Button>
+</TabPane>
+
               </Tabs>
             </Card>
           ) : (
