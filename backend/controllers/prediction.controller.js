@@ -111,9 +111,10 @@ export const createPrediction = asyncHandler(async (req, res) => {
       patient: patientId,
       doctor: req.user.id,
       result: {
-        risk: aiPrediction.risk_level?.toLowerCase() || "unknown",  // ✅ compatible with PatientDashboard
-        score: aiPrediction.score || 0.8,  // optional fallback
+        risk: aiPrediction.result_risk || "unknown",    // ✅ FIXED
+        score: aiPrediction.confidence || 0.8,          // ✅ FIXED
       },
+      predictionResult: aiPrediction.risk_level || "Unknown",  // ✅ UI display field
       confidence: aiPrediction.confidence,
       diseaseTypes: aiPrediction.chronic_disease_types || [],
       recommendations: aiPrediction.recommendations || [],

@@ -113,28 +113,45 @@ def predict():
         # === Confidence ===
         confidence = float(max(prediction_proba))
         
-        # === Risk level ===
+        # === Risk level for UI (unchanged)
         if prediction == 1:
             if confidence > 0.8:
                 risk_level = 'High'
             elif confidence > 0.6:
-                risk_level = 'Moderate-High'
+                risk_level = 'Moderate'
             else:
                 risk_level = 'Moderate'
         else:
             if confidence > 0.8:
                 risk_level = 'Low'
             elif confidence > 0.6:
-                risk_level = 'Low-Moderate'
+                risk_level = 'Moderate'
             else:
                 risk_level = 'Moderate'
+
+        # === Risk level for Mongoose result.risk field → match your ENUM!
+        if prediction == 1:
+            if confidence > 0.8:
+                result_risk = 'high'
+            elif confidence > 0.6:
+                result_risk = 'medium'
+            else:
+                result_risk = 'medium'
+        else:
+            if confidence > 0.8:
+                result_risk = 'low'
+            elif confidence > 0.6:
+                result_risk = 'medium'
+            else:
+                result_risk = 'medium'
 
         # === Response ===
         response = {
             'success': True,
             'prediction': int(prediction),
             'confidence': confidence,
-            'risk_level': risk_level,
+            'risk_level': risk_level,   # for UI
+            'result_risk': result_risk, # for Mongoose result.risk field
             'chronic_disease_types': disease_types,
             'probability_scores': {
                 'no_risk': float(prediction_proba[0]),
@@ -152,6 +169,7 @@ def predict():
             'error': f'Prediction failed: {str(e)}',
             'success': False
         }), 500
+
 
 def generate_recommendations(prediction, disease_types, confidence):
     """Generate medical recommendations based on prediction"""

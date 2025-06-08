@@ -1,7 +1,18 @@
-"use client"
-import { Outlet, useNavigate, useLocation } from "react-router-dom"
-import { useDispatch, useSelector } from "react-redux"
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Button, Space, Typography } from "antd"
+"use client";
+
+import { useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Layout as AntLayout,
+  Menu,
+  Avatar,
+  Dropdown,
+  Button,
+  Space,
+  Typography,
+  Switch,
+} from "antd";
 import {
   UserOutlined,
   DashboardOutlined,
@@ -11,45 +22,56 @@ import {
   SettingOutlined,
   MedicineBoxOutlined,
   ExperimentOutlined,
-} from "@ant-design/icons"
-import { logoutUser } from "../../store/slices/authSlice"
+} from "@ant-design/icons";
+import { logoutUser } from "../../store/slices/authSlice";
 
-const { Header, Sider, Content } = AntLayout
-const { Title } = Typography
+const { Header, Sider, Content } = AntLayout;
+const { Title } = Typography;
 
 const Layout = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const dispatch = useDispatch()
-  const { user } = useSelector((state) => state.auth)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const handleLogout = () => {
-    dispatch(logoutUser())
-    navigate("/login")
-  }
+    dispatch(logoutUser());
+    navigate("/login");
+  };
+
+  const handleUserMenuClick = ({ key }) => {
+    if (key === "profile") {
+      navigate("/profile");
+    } else if (key === "settings") {
+      navigate("/settings");
+    }
+    // Logout is already handled in item itself
+  };
 
   const getMenuItems = () => {
-    const baseItems = [
-      {
-        key: "/dashboard",
-        icon: <DashboardOutlined />,
-        label: "Dashboard",
-      },
-    ]
-
     switch (user?.role) {
       case "admin":
         return [
-          ...baseItems,
           {
             key: "/admin",
-            icon: <TeamOutlined />,
-            label: "System Management",
+            icon: <DashboardOutlined />,
+            label: "Global Dashboard",
           },
-        ]
+          {
+            key: "/admin/GestionUsers",
+            icon: <TeamOutlined />,
+            label: "Gestion Users",
+          },
+        ];
       case "doctor":
         return [
-          ...baseItems,
+          {
+            key: "/doctor",
+            icon: <DashboardOutlined />,
+            label: "My Dashboard",
+          },
           {
             key: "/doctor/patients",
             icon: <TeamOutlined />,
@@ -65,25 +87,24 @@ const Layout = () => {
             icon: <ExperimentOutlined />,
             label: "AI Predictions",
           },
-        ]
+        ];
       case "patient":
         return [
-          ...baseItems,
           {
             key: "/patient",
-            icon: <FileTextOutlined />,
-            label: "My Records",
+            icon: <DashboardOutlined />,
+            label: "My Dashboard",
           },
           {
             key: "/patient/form",
             icon: <FileTextOutlined />,
             label: "Medical Form",
           },
-        ]
+        ];
       default:
-        return baseItems
+        return [];
     }
-  }
+  };
 
   const userMenuItems = [
     {
@@ -105,12 +126,12 @@ const Layout = () => {
       label: "Logout",
       onClick: handleLogout,
     },
-  ]
+  ];
 
   return (
     <AntLayout style={{ minHeight: "100vh" }}>
       <Sider
-        theme="light"
+        theme={isDarkMode ? "dark" : "light"}
         width={250}
         style={{
           overflow: "auto",
@@ -138,19 +159,38 @@ const Layout = () => {
         <Header
           style={{
             padding: "0 24px",
-            background: "#fff",
+            background: isDarkMode ? "#1f1f1f" : "#fff",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             boxShadow: "0 1px 4px rgba(0,21,41,.08)",
           }}
         >
-          <Title level={4} style={{ margin: 0 }}>
+          <Title
+            level={4}
+            style={{
+              margin: 0,
+              color: isDarkMode ? "#fff" : "inherit",
+            }}
+          >
             {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} Dashboard
           </Title>
 
           <Space>
-            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={["click"]}>
+            {/* Dark Mode Switch */}
+            <Switch
+              checkedChildren="🌙"
+              unCheckedChildren="☀️"
+              checked={isDarkMode}
+              onChange={setIsDarkMode}
+            />
+
+            {/* User Dropdown */}
+            <Dropdown
+              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+              placement="bottomRight"
+              trigger={["click"]}
+            >
               <Button type="text" style={{ height: "auto", padding: "4px 8px" }}>
                 <Space>
                   <Avatar size="small" icon={<UserOutlined />} />
@@ -165,16 +205,18 @@ const Layout = () => {
           style={{
             margin: "24px",
             padding: "24px",
-            background: "#fff",
+            background: isDarkMode ? "#141414" : "#fff",
+            color: isDarkMode ? "#ddd" : "inherit",
             borderRadius: "8px",
             minHeight: "calc(100vh - 112px)",
+            transition: "all 0.3s",
           }}
         >
           <Outlet />
         </Content>
       </AntLayout>
     </AntLayout>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;

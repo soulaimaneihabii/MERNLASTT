@@ -280,12 +280,11 @@
 // }
 
 // export default PatientDashboard
+"use client";
 
-"use client"
-
-import { useEffect, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Row,
@@ -299,56 +298,59 @@ import {
   notification,
   Tooltip,
   Modal,
-} from "antd"
+  Divider,
+} from "antd";
 import {
   FileTextOutlined,
   DownloadOutlined,
   PlusOutlined,
   ExperimentOutlined,
   CalendarOutlined,
-} from "@ant-design/icons"
+} from "@ant-design/icons";
 import {
   fetchPredictionHistory,
   clearError,
-} from "../../store/slices/predictionsSlice"
+} from "../../store/slices/predictionsSlice";
 import {
   exportPatientData,
   fetchCurrentPatient,
   fetchCurrentPatientForPatientRole,
-} from "../../store/slices/patientsSlice"
+} from "../../store/slices/patientsSlice";
 
-const { Title, Text } = Typography
+const { Title, Text } = Typography;
 
 const PatientDashboard = () => {
-  const dispatch = useDispatch()
-  const navigate = useNavigate()
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const { predictionHistory = [], loading, error } = useSelector(
     (state) => state.predictions
-  )
-  const { exportLoading, currentPatient } = useSelector((state) => state.patients)
-  const { user } = useSelector((state) => state.auth)
+  );
+  const { exportLoading, currentPatient } = useSelector(
+    (state) => state.patients
+  );
+  const { user } = useSelector((state) => state.auth);
 
-  const [detailModalVisible, setDetailModalVisible] = useState(false)
-  const [selectedPrediction, setSelectedPrediction] = useState(null)
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedPrediction, setSelectedPrediction] = useState(null);
 
   // Load current patient
   useEffect(() => {
     if (user?.id) {
       if (user.role === "patient") {
-        dispatch(fetchCurrentPatientForPatientRole())
+        dispatch(fetchCurrentPatientForPatientRole());
       } else {
-        dispatch(fetchCurrentPatient(user.id))
+        dispatch(fetchCurrentPatient(user.id));
       }
     }
-  }, [dispatch, user?.id, user?.role])
+  }, [dispatch, user?.id, user?.role]);
 
   // Load prediction history
   useEffect(() => {
     if (currentPatient?._id) {
-      dispatch(fetchPredictionHistory(currentPatient._id))
+      dispatch(fetchPredictionHistory(currentPatient._id));
     }
-  }, [dispatch, currentPatient?._id])
+  }, [dispatch, currentPatient?._id]);
 
   // Error handling
   useEffect(() => {
@@ -356,49 +358,73 @@ const PatientDashboard = () => {
       notification.error({
         message: "Error",
         description: error,
-      })
-      dispatch(clearError())
+      });
+      dispatch(clearError());
     }
-  }, [error, dispatch])
+  }, [error, dispatch]);
 
   // Export patient data
   const handleExportData = async () => {
     try {
       if (!currentPatient?._id) {
-        throw new Error("Patient ID not available")
+        throw new Error("Patient ID not available");
       }
 
-      const result = await dispatch(exportPatientData(currentPatient._id)).unwrap()
+      const result = await dispatch(
+        exportPatientData(currentPatient._id)
+      ).unwrap();
 
-      const blob = new Blob([result], { type: "application/pdf" })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `medical-records-${currentPatient.fullName || "patient"}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      const blob = new Blob([result], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `medical-records-${
+        currentPatient.fullName || "patient"
+      }.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       notification.success({
         message: "Success",
         description: "Medical records exported successfully",
-      })
+      });
     } catch (error) {
       notification.error({
         message: "Error",
         description: error.message || "Failed to export data",
-      })
+      });
     }
-  }
+  };
 
+  // Stats
+  const totalPredictions = Array.isArray(predictionHistory)
+    ? predictionHistory.length
+    : 0;
+
+  const recentPredictions = Array.isArray(predictionHistory)
+    ? predictionHistory.filter(
+        (p) =>
+          p?.createdAt &&
+          new Date(p.createdAt) >
+            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ).length
+    : 0;
+
+  const highRiskPredictions = Array.isArray(predictionHistory)
+    ? predictionHistory.filter((p) => p?.predictionResult === "High").length
+    : 0;
+
+  // Table columns
   const columns = [
     {
       title: "Date",
       dataIndex: "createdAt",
       key: "createdAt",
       render: (date) => (date ? new Date(date).toLocaleDateString() : "N/A"),
-      sorter: (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+      sorter: (a, b) =>
+        new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
     },
     {
       title: "Prediction Result",
@@ -412,8 +438,8 @@ const PatientDashboard = () => {
             ? "orange"
             : result === "Low"
             ? "green"
-            : "default"
-        return <Tag color={color}>{result}</Tag>
+            : "default";
+        return <Tag color={color}>{result}</Tag>;
       },
     },
     {
@@ -439,8 +465,8 @@ const PatientDashboard = () => {
               type="link"
               icon={<FileTextOutlined />}
               onClick={() => {
-                setSelectedPrediction(record)
-                setDetailModalVisible(true)
+                setSelectedPrediction(record);
+                setDetailModalVisible(true);
               }}
             >
               Details
@@ -449,34 +475,19 @@ const PatientDashboard = () => {
         </Space>
       ),
     },
-  ]
-
-  const totalPredictions = Array.isArray(predictionHistory)
-    ? predictionHistory.length
-    : 0
-
-  const recentPredictions = Array.isArray(predictionHistory)
-    ? predictionHistory.filter(
-        (p) =>
-          p?.createdAt &&
-          new Date(p.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      ).length
-    : 0
-
-  const highRiskPredictions = Array.isArray(predictionHistory)
-    ? predictionHistory.filter((p) => p?.predictionResult === "High").length
-    : 0
+  ];
 
   return (
     <div>
+      {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={2}>My Medical Dashboard</Title>
-        <Text type="secondary">
-          Welcome back, {currentPatient?.fullName || user?.name || "Patient"}! Here are
-          your predictions.
-        </Text>
+        <Title level={2}>
+          Welcome back, {currentPatient?.fullName || user?.name || "Patient"}
+        </Title>
+        <Text type="secondary">Your personal health dashboard</Text>
       </div>
 
+      {/* Top stats */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card>
@@ -513,7 +524,9 @@ const PatientDashboard = () => {
               title="Last Update"
               value={
                 predictionHistory?.[0]?.createdAt
-                  ? new Date(predictionHistory[0].createdAt).toLocaleDateString()
+                  ? new Date(
+                      predictionHistory[0].createdAt
+                    ).toLocaleDateString()
                   : "No data"
               }
               prefix={<FileTextOutlined />}
@@ -522,6 +535,7 @@ const PatientDashboard = () => {
         </Col>
       </Row>
 
+      {/* Prediction History */}
       <Row gutter={16}>
         <Col span={24}>
           <Card
@@ -547,19 +561,79 @@ const PatientDashboard = () => {
           >
             <Table
               columns={columns}
-              dataSource={Array.isArray(predictionHistory) ? predictionHistory : []}
+              dataSource={
+                Array.isArray(predictionHistory) ? predictionHistory : []
+              }
               rowKey={(record) => record._id || Math.random().toString()}
               loading={loading}
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} of ${total} items`,
               }}
               locale={{
-                emptyText: "No predictions yet. Fill out a medical form to get started.",
+                emptyText:
+                  "No predictions yet. Fill out a medical form to get started.",
               }}
             />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* ===== Dossier Santé Électronique (DSE) ===== */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={24}>
+          <Card
+            title="📂 Dossier Santé Électronique (DSE)"
+            bordered={true}
+          >
+            {/* Prediction Summary */}
+            <Divider orientation="left">📊 Predictions</Divider>
+            <p><strong>Total Predictions:</strong> {totalPredictions}</p>
+            <p><strong>Recent (30 days):</strong> {recentPredictions}</p>
+            <p><strong>High Risk Alerts:</strong> {highRiskPredictions}</p>
+
+            {/* Vitals */}
+            <Divider orientation="left">🩺 Vitals</Divider>
+            {currentPatient?.vitals ? (
+              <ul>
+                <li>Heart Rate: {currentPatient.vitals.heartRate || "N/A"} BPM</li>
+                <li>Blood Pressure: {currentPatient.vitals.bloodPressure || "N/A"}</li>
+                <li>Glucose Level: {currentPatient.vitals.glucoseLevel || "N/A"} mg/dL</li>
+              </ul>
+            ) : (
+              <p>No vitals data available.</p>
+            )}
+
+            {/* Medications */}
+            <Divider orientation="left">💊 Current Medications</Divider>
+            {Array.isArray(currentPatient?.currentMedications) && currentPatient.currentMedications.length > 0 ? (
+              <ul>
+                {currentPatient.currentMedications.map((med, index) => (
+                  <li key={index}>
+                    {med.name} - {med.dosage} - {med.frequency}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No current medications listed.</p>
+            )}
+
+            {/* Documents */}
+            <Divider orientation="left">📄 Medical Documents</Divider>
+            {Array.isArray(currentPatient?.medicalFiles) && currentPatient.medicalFiles.length > 0 ? (
+              <ul>
+                {currentPatient.medicalFiles.map((doc, index) => (
+                  <li key={index}>
+                    <a href={doc.url} target="_blank" rel="noopener noreferrer">{doc.name}</a> - {new Date(doc.uploadDate).toLocaleDateString()}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No medical documents uploaded.</p>
+            )}
           </Card>
         </Col>
       </Row>
@@ -586,7 +660,8 @@ const PatientDashboard = () => {
             </p>
             <p>
               <strong>Doctor:</strong>{" "}
-              {selectedPrediction.doctor?.name || selectedPrediction.doctor?.email}
+              {selectedPrediction.doctor?.name ||
+                selectedPrediction.doctor?.email}
             </p>
             <p>
               <strong>Status:</strong> {selectedPrediction.status}
@@ -604,7 +679,7 @@ const PatientDashboard = () => {
         )}
       </Modal>
     </div>
-  )
-}
+  );
+};
 
-export default PatientDashboard
+export default PatientDashboard;

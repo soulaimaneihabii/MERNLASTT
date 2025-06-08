@@ -7,11 +7,14 @@ import aiService from "../services/ai.service.js"
 // @desc    Get dashboard statistics
 // @route   GET /api/analytics/dashboard
 // @access  Private/Doctor or Admin
+// @desc    Get dashboard statistics
+// @route   GET /api/analytics/dashboard
+// @access  Private/Admin or Doctor
 export const getDashboardStats = asyncHandler(async (req, res) => {
-  const isDoctor = req.user.role === "doctor"
-  const matchCondition = isDoctor ? { doctor: req.user.id } : {}
+  const isDoctor = req.user.role === "doctor";
+  const matchCondition = isDoctor ? { doctor: req.user.id } : {};
 
-  // Get basic counts
+  // Basic counts
   const [totalPatients, totalPredictions, recentPredictions, highRiskPredictions] = await Promise.all([
     Patient.countDocuments(isDoctor ? { doctor: req.user.id } : {}),
     Prediction.countDocuments(matchCondition),
@@ -23,9 +26,9 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       ...matchCondition,
       predictionResult: { $in: ["High Risk", "Critical Risk"] },
     }),
-  ])
+  ]);
 
-  // Get prediction accuracy (confirmed vs total)
+  // Accuracy stats
   const accuracyStats = await Prediction.aggregate([
     { $match: matchCondition },
     {
@@ -43,20 +46,20 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         },
       },
     },
-  ])
+  ]);
 
-  const accuracy = accuracyStats[0]
-  const accuracyRate = accuracy ? (accuracy.confirmed / accuracy.total) * 100 : 0
+  const accuracy = accuracyStats[0];
+  const accuracyRate = accuracy ? (accuracy.confirmed / accuracy.total) * 100 : 0;
 
-  // Get recent activity
+  // Recent activity
   const recentActivity = await Prediction.find(matchCondition)
     .populate("patient", "firstName lastName age")
     .populate("doctor", "name")
     .sort({ createdAt: -1 })
     .limit(5)
-    .select("predictionResult confidence status createdAt")
+    .select("predictionResult confidence status createdAt");
 
-  // Get risk distribution
+  // Risk distribution
   const riskDistribution = await Prediction.aggregate([
     { $match: matchCondition },
     {
@@ -65,8 +68,39 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         count: { $sum: 1 },
       },
     },
-  ])
+  ]);
 
+  // 🚀 Add admin-specific stats
+  let userStats = null;
+
+  if (req.user.role === "admin") {
+    const users = await User.aggregate([
+      {
+        $group: {
+          _id: "$role",
+          count: { $sum: 1 },
+          active: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    const totalUsers = await User.countDocuments();
+    const totalDoctors = await User.countDocuments({ role: "doctor" });
+    const totalAdmins = await User.countDocuments({ role: "admin" });
+    const activeUsers = await User.countDocuments({ isActive: true });
+
+    userStats = {
+      totalUsers,
+      totalDoctors,
+      totalAdmins,
+      activeUsers,
+      roleDistribution: users,
+    };
+  }
+
+  // ✅ Final response
   res.status(200).json({
     success: true,
     data: {
@@ -80,9 +114,11 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       accuracy: accuracy || { total: 0, confirmed: 0, rejected: 0, pending: 0 },
       riskDistribution,
       recentActivity,
+      userStats,  // only if admin
     },
-  })
-})
+  });
+});
+
 
 // @desc    Get prediction analytics
 // @route   GET /api/analytics/predictions
@@ -457,3 +493,34 @@ export const getSystemHealth = asyncHandler(async (req, res) => {
     },
   })
 })
+export const getPatientsPerDoctor = asyncHandler(async (req, res) => {
+    const patientsPerDoctor = await Patient.aggregate([
+        { $match: { doctor: { $ne: null } } },
+        {
+            $group: {
+                _id: "$doctor",
+                count: { $sum: 1 },
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "_id",
+                as: "doctorInfo",
+            },
+        },
+        { $unwind: "$doctorInfo" },
+        {
+            $project: {
+                doctor: "$doctorInfo.name",
+                patients: "$count",
+            },
+        },
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: patientsPerDoctor,
+    });
+});

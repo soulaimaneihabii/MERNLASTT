@@ -14,28 +14,15 @@ import {
   validateToken,
 } from "../controllers/auth.controller.js"
 import { protect } from "../middleware/auth.middleware.js"
-import rateLimit from "express-rate-limit"
+
+import { loginLimiter, passwordResetLimiter } from "../middleware/rateLimit.js"
 
 const router = express.Router()
 
 // Rate limiting for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: {
-    error: "Too many authentication attempts, please try again later.",
-  },
-})
 
-const passwordResetLimiter = rateLimit({
- windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message: { error: 'Too many authentication attempts, please try again later.' },
-    skip: (req, res) => {
-        // 🚀 SKIP limiter for admin
-        return req.body.email === 'admin@gmail.com'
-  },
-})
+
+
 
 /**
  * @swagger
@@ -107,7 +94,7 @@ const passwordResetLimiter = rateLimit({
  *       400:
  *         description: Bad request
  */
-router.post("/register", authLimiter, register)
+router.post("/register", loginLimiter, register)
 
 /**
  * @swagger
@@ -147,7 +134,7 @@ router.post("/register", authLimiter, register)
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", authLimiter, login)
+router.post("/login",  login) //to pass and stoping from many req  add this loginLimiter
 
 /**
  * @swagger
@@ -174,7 +161,7 @@ router.post("/login", authLimiter, login)
  *       200:
  *         description: Login successful
  */
-router.post("/signin", authLimiter, login) // Alias for login
+router.post("/signin", loginLimiter, login) // Alias for login
 
 /**
  * @swagger

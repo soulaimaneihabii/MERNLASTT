@@ -30,13 +30,14 @@ import {
 } from "@ant-design/icons";
 import { fetchUsers, createUser, updateUser, deleteUser, clearError } from "../../store/slices/usersSlice";
 import { fetchPatients } from "../../store/slices/patientsSlice";
-import ApiTester from "../../components/DevTools/ApiTester";
+import API from "../../services/api";
+import SystemInfo from "./SystemInfo";  // adjust path if needed
 
 const { Title } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
-const AdminDashboard = () => {
+const GestionUsers = () => {
   const dispatch = useDispatch();
   const { users = [], total = 0, loading, error, currentPage, pageSize } = useSelector((state) => state.users);
   const { patients = [] } = useSelector((state) => state.patients);
@@ -48,7 +49,8 @@ const AdminDashboard = () => {
 
   // ✅ Fetch data
   useEffect(() => {
-    dispatch(fetchUsers({ page: currentPage, limit: pageSize }));
+    dispatch(fetchUsers({ page: currentPage, limit: pageSize, role: 'admin_or_doctor' }));
+
     dispatch(fetchPatients({})); // Admin fetch all patients
   }, [dispatch, currentPage, pageSize]);
 
@@ -259,20 +261,21 @@ const AdminDashboard = () => {
               </Button>
             </div>
 
-            <Table
-              columns={userColumns}
-              dataSource={users.filter((u) => u.role !== "patient")}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                current: currentPage,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-              }}
-            />
+          <Table
+  columns={userColumns}
+  dataSource={users.filter((u) => u.role === "admin" || u.role === "doctor")}
+  rowKey="id"
+  loading={loading}
+  pagination={{
+    current: currentPage,
+    pageSize,
+    total,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+  }}
+/>
+
           </Card>
         </TabPane>
 
@@ -287,24 +290,27 @@ const AdminDashboard = () => {
           </Row>
 
           <Card title="All Patients by Doctor">
-            <Table
-              columns={patientColumns}
-              dataSource={patients}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-              }}
-            />
+           <Table
+  columns={userColumns}
+  dataSource={users}    // No need to filter anymore!
+  rowKey="id"
+  loading={loading}
+  pagination={{
+    current: currentPage,
+    pageSize,
+    total,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+  }}
+/>
+
           </Card>
         </TabPane>
 
         {/* System info tab */}
         <TabPane tab="System Information" key="system" icon={<BugOutlined />}>
-          <ApiTester />
+          <SystemInfo />
         </TabPane>
       </Tabs>
 
@@ -386,4 +392,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default GestionUsers;

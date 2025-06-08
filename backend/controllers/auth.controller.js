@@ -96,11 +96,16 @@ export const login = asyncHandler(async (req, res) => {
     throw new Error("Account is deactivated. Please contact administrator.");
   }
 
+ 
   // Protect against brute-force (except admin)
-  if (user.role !== "admin" && user.loginAttempts > 5) {
-    res.status(429);
-    throw new Error("Too many authentication attempts, please try again later.");
-  }
+if (user.role !== "admin" && user.loginAttempts > 5) {
+  res.status(429);
+  throw new Error("Too many authentication attempts, please try again later.");
+} else if (user.role === "admin" && user.loginAttempts > 5) {
+  // Automatically reset admin login attempts if exceeded
+  await user.resetLoginAttempts();
+}
+
 
   // Check if password matches
   const isMatch = await user.matchPassword(password);

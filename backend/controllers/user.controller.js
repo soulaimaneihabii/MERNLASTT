@@ -13,9 +13,21 @@ export const getUsers = asyncHandler(async (req, res) => {
   const startIndex = (page - 1) * limit;
 
   const filter = {};
-  if (req.query.role) filter.role = req.query.role;
-  if (req.query.department) filter.department = new RegExp(req.query.department, "i");
-  if (req.query.isActive !== undefined) filter.isActive = req.query.isActive === "true";
+
+  // 🚀 Add this condition:
+  if (req.query.role === 'admin_or_doctor') {
+    filter.role = { $in: ['admin', 'doctor'] };
+  } else if (req.query.role) {
+    filter.role = req.query.role;
+  }
+
+  if (req.query.department) {
+    filter.department = new RegExp(req.query.department, "i");
+  }
+
+  if (req.query.isActive !== undefined) {
+    filter.isActive = req.query.isActive === "true";
+  }
 
   const total = await User.countDocuments(filter);
 
