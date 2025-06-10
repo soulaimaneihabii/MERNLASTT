@@ -1,13 +1,16 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Blueprint
 from flask_cors import CORS
 import joblib
 import pandas as pd
 import numpy as np
-import os
 from datetime import datetime
+import time
+from pymongo import MongoClient
+from bson import ObjectId
+
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 
 # Load the trained model
 try:
@@ -26,8 +29,8 @@ chronic_diag_map = {
     'N18': 'Kidney Disease',
     'J44': 'COPD'
 }
+
 def get_chronic_disease_types(patient_data):
-    """Extract chronic disease types from diagnosis codes"""
     diseases = set()
     for diag_col in ['diag_1', 'diag_2', 'diag_3']:
         val = patient_data.get(diag_col)
@@ -35,12 +38,10 @@ def get_chronic_disease_types(patient_data):
             code = str(val).split('.')[0]
             if code in chronic_diag_map:
                 diseases.add(chronic_diag_map[code])
-    
     return list(sorted(diseases)) if diseases else []
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'model_loaded': model is not None,
@@ -49,7 +50,6 @@ def health_check():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Main prediction endpoint"""
     try:
         if model is None:
             return jsonify({
@@ -57,23 +57,20 @@ def predict():
                 'success': False
             }), 500
 
-        # Get patient data from request
         patient_data = request.json
-        
+
         if not patient_data:
             return jsonify({
                 'error': 'No patient data provided',
                 'success': False
             }), 400
 
-        # === PATCH — Convert diabetesMed to 0/1 ===
         if 'diabetesMed' in patient_data:
             if str(patient_data['diabetesMed']).lower() in ['yes', '1', 'true']:
                 patient_data['diabetesMed'] = 1
             else:
                 patient_data['diabetesMed'] = 0
 
-        # === PATCH — Convert numerical fields ===
         int_fields = [
             'time_in_hospital',
             'number_inpatient',
@@ -90,68 +87,40 @@ def predict():
                 try:
                     patient_data[field] = int(patient_data[field])
                 except:
-                    patient_data[field] = 0  # fallback default
+                    patient_data[field] = 0
 
-        # === Convert to DataFrame ===
         df = pd.DataFrame([patient_data])
 
-        # DEBUG — show incoming columns vs model expected
-        print("Incoming columns:", df.columns.tolist())
         if hasattr(model, 'feature_names_in_'):
-            print("Model expects:", model.feature_names_in_)
-
-            # OPTIONAL: reorder columns to match model
             df = df[model.feature_names_in_]
 
-        # === Make prediction ===
         prediction = model.predict(df)[0]
         prediction_proba = model.predict_proba(df)[0]
 
-        # === Chronic disease types ===
         disease_types = get_chronic_disease_types(patient_data)
-        
-        # === Confidence ===
         confidence = float(max(prediction_proba))
-        
-        # === Risk level for UI (unchanged)
+
+        result_risk = 'medium'
+        risk_level = 'Moderate'
+
         if prediction == 1:
             if confidence > 0.8:
                 risk_level = 'High'
+                result_risk = 'high'
             elif confidence > 0.6:
                 risk_level = 'Moderate'
-            else:
-                risk_level = 'Moderate'
+                result_risk = 'medium'
         else:
             if confidence > 0.8:
                 risk_level = 'Low'
-            elif confidence > 0.6:
-                risk_level = 'Moderate'
-            else:
-                risk_level = 'Moderate'
-
-        # === Risk level for Mongoose result.risk field → match your ENUM!
-        if prediction == 1:
-            if confidence > 0.8:
-                result_risk = 'high'
-            elif confidence > 0.6:
-                result_risk = 'medium'
-            else:
-                result_risk = 'medium'
-        else:
-            if confidence > 0.8:
                 result_risk = 'low'
-            elif confidence > 0.6:
-                result_risk = 'medium'
-            else:
-                result_risk = 'medium'
 
-        # === Response ===
         response = {
             'success': True,
             'prediction': int(prediction),
             'confidence': confidence,
-            'risk_level': risk_level,   # for UI
-            'result_risk': result_risk, # for Mongoose result.risk field
+            'risk_level': risk_level,
+            'result_risk': result_risk,
             'chronic_disease_types': disease_types,
             'probability_scores': {
                 'no_risk': float(prediction_proba[0]),
@@ -160,60 +129,110 @@ def predict():
             'timestamp': datetime.now().isoformat(),
             'recommendations': generate_recommendations(prediction, disease_types, confidence)
         }
-        
+
         return jsonify(response)
-        
+
     except Exception as e:
-        print(f"Prediction failed: {e}")
         return jsonify({
             'error': f'Prediction failed: {str(e)}',
             'success': False
         }), 500
 
-
 def generate_recommendations(prediction, disease_types, confidence):
-    """Generate medical recommendations based on prediction"""
     recommendations = []
-    
-    if prediction == 1:  # High risk
+
+    if prediction == 1:
         recommendations.append("Schedule regular follow-up appointments")
         recommendations.append("Monitor vital signs closely")
-        
+
         if 'Diabetes' in disease_types:
             recommendations.extend([
                 "Monitor blood glucose levels daily",
                 "Follow diabetic diet plan",
                 "Consider insulin therapy adjustment"
             ])
-        
+
         if 'Heart Disease' in disease_types or 'Heart Failure' in disease_types:
             recommendations.extend([
                 "Monitor blood pressure regularly",
                 "Limit sodium intake",
                 "Consider cardiology consultation"
             ])
-        
+
         if 'Kidney Failure' in disease_types:
             recommendations.extend([
                 "Monitor kidney function tests",
                 "Adjust medication dosages",
                 "Consider nephrology referral"
             ])
-            
+
         if 'Cholesterol' in disease_types:
             recommendations.extend([
                 "Follow low-cholesterol diet",
                 "Consider statin therapy",
                 "Regular lipid panel monitoring"
             ])
-    else:  # Low risk
+    else:
         recommendations.extend([
             "Maintain healthy lifestyle",
             "Regular preventive check-ups",
             "Continue current medication regimen"
         ])
-    
+
     return recommendations
+
+# === AI Assistance Endpoint ===
+ai_assistant_bp = Blueprint('ai_assistant', __name__)
+
+client = MongoClient("mongodb+srv://soulayemane3:12345678Aa@cluster0.ndrdvsm.mongodb.net/MERN_APP_LATEST?retryWrites=true&w=majority&appName=Cluster0")
+db = client["medapp"]
+patients = db["patients"]
+
+@ai_assistant_bp.route('/assist', methods=['POST'])
+def ai_assist():
+    data = request.json
+    patient_id = data.get('patient_id')
+
+    patient = patients.find_one({"_id": ObjectId(patient_id)})
+    if not patient:
+        return jsonify({"success": False, "error": "Patient not found"}), 404
+
+    age = int(patient.get("age", 35))
+    gender = patient.get("gender", "Male")
+    race = patient.get("race", "White")
+
+    time.sleep(1)  # Simulate delay
+
+    suggested_fields = {
+        "age": age,
+        "diag_1": "E11.9" if age > 50 else "E10.9",
+        "diag_2": "I10" if gender == "Male" else "N18.9",
+        "diag_3": "J44.9" if race == "African American" else "None",
+        "max_glu_serum": ">300" if age > 60 else ">200" if age > 40 else "Norm",
+        "A1Cresult": ">8" if age > 60 else ">7" if age > 45 else "Norm",
+        "insulin": "Up" if gender == "Male" and age > 50 else "Steady",
+        "metformin": "Up" if race in ["White", "Hispanic"] else "Steady",
+        "diabetesMed": "Yes" if age > 30 else "No",
+        "time_in_hospital": 7 if age > 60 else 4 if age > 40 else 2,
+        "num_lab_procedures": 70 if age > 55 else 50,
+        "num_procedures": 3 if age > 50 else 2,
+        "num_medications": 12 if gender == "Male" else 10,
+        "number_outpatient": 2 if age > 50 else 1,
+        "number_emergency": 1 if age > 60 else 0,
+        "number_inpatient": 2 if age > 55 else 1,
+        "number_diagnoses": 5 if age > 50 else 3
+    }
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "patient_id": str(patient_id),
+            "suggestedFields": suggested_fields
+        }
+    })
+
+# Register blueprint
+app.register_blueprint(ai_assistant_bp, url_prefix="/api/ai")
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

@@ -27,6 +27,7 @@ import userRoutes from "./routes/user.routes.js"
 import patientRoutes from "./routes/patient.routes.js"
 import predictionRoutes from "./routes/prediction.routes.js"
 import analyticsRoutes from "./routes/analytics.routes.js"
+import aiRoutes from "./routes/ai.routes.js"
 // import reportsRoutes from "./routes/reports.routes.js"
 // import appointmentsRoutes from "./routes/appointments.routes.js"
 // import debugRoutes from "./routes/debug.routes.js"
@@ -105,7 +106,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: process.env.API_URL || "http://localhost:3001/api",
+        url: process.env.API_URL || "http://localhost:5000/api",
         description: "Development server",
       },
     ],
@@ -151,6 +152,7 @@ app.use("/api/users", userRoutes)
 app.use("/api/patients", patientRoutes)
 app.use("/api/predictions", predictionRoutes)
 app.use("/api/analytics", analyticsRoutes)
+app.use('/api/ai', aiRoutes);
 // app.use("/api/reports", reportsRoutes)
 // app.use("/api/appointments", appointmentsRoutes)
 

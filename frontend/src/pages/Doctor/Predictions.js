@@ -162,7 +162,7 @@ const Predictions = () => {
       },
     },
     {
-      title: "Confidence",
+      title: "Risk Percentage % ",
       dataIndex: "confidence",
       key: "confidence",
       render: (confidence) => (
@@ -321,7 +321,7 @@ const Predictions = () => {
               <strong>Risk Level:</strong> {predictionResult.predictionResult}
             </p>
             <p>
-              <strong>Confidence:</strong>{" "}
+              <strong>Risk Percentage %:</strong>{" "}
               {Math.round((predictionResult.confidence || 0) * 100)}%
             </p>
             <p>

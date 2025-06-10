@@ -36,6 +36,8 @@ import {
 } from "@ant-design/icons"
 import { fetchPatients, updatePatient } from "../../store/slices/patientsSlice"
 import { getAISuggestions } from "../../services/aiAssistantService";
+import { scanDocumentWithOCR } from "../../utils/ocrService";
+
 
 import dayjs from "dayjs"
 
@@ -236,21 +238,86 @@ const handleAISuggestions = async () => {
     });
   }
 };
-
-  const handleFileUpload = ({ fileList: newFileList }) => {
-    setFileList(newFileList)
-
-    const uploadedFiles = newFileList.map((file) => ({
-      uid: file.uid,
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      url: file.response?.url || file.url,
-      uploadDate: new Date().toISOString(),
-    }))
-
-    setMedicalFiles(uploadedFiles)
+const exportDSEFile = () => {
+  if (!selectedPatient) {
+    notification.warning({
+      message: "No Patient Selected",
+      description: "Please select a patient first.",
+    });
+    return;
   }
+
+  const dseData = {
+    patientId: selectedPatient.id,
+    firstName: selectedPatient.firstName,
+    lastName: selectedPatient.lastName,
+    medicalFiles: medicalFiles.map((file) => ({
+      name: file.name,
+      ocrText: file.ocrText,
+      uploadDate: file.uploadDate,
+    })),
+    exportedAt: new Date().toISOString(),
+  };
+
+  const jsonStr = JSON.stringify(dseData, null, 2);
+
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Patient_${selectedPatient.id}_DSE.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+
+  notification.success({
+    message: "DSE Exported",
+    description: "Patient DSE file was exported successfully.",
+  });
+};
+ const handleFileUpload = async ({ fileList: newFileList }) => {
+  setFileList(newFileList);
+
+  const uploadedFiles = await Promise.all(
+    newFileList.map(async (file) => {
+      let ocrText = "";
+      try {
+        notification.info({
+          message: "Scanning Document",
+          description: `Running OCR on ${file.name}...`,
+        });
+
+        ocrText = await scanDocumentWithOCR(file);
+
+        notification.success({
+          message: "OCR Complete",
+          description: `Extracted text from ${file.name}`,
+        });
+
+      } catch (err) {
+        notification.error({
+          message: "OCR Failed",
+          description: `Failed to scan ${file.name}`,
+        });
+      }
+
+      return {
+        uid: file.uid,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: file.response?.url || file.url,
+        uploadDate: new Date().toISOString(),
+        ocrText: ocrText, // 🟢 Add scanned text here!
+      };
+    })
+  );
+
+  setMedicalFiles(uploadedFiles);
+};
 
   const handleDeleteFile = (fileUid) => {
     setMedicalFiles(medicalFiles.filter((file) => file.uid !== fileUid))
@@ -691,15 +758,24 @@ const handleAISuggestions = async () => {
   <Divider />
 
   <Button
-    type="primary"
-    size="large"
-    icon={<SaveOutlined />}
-    onClick={handleSaveMedicalInfo}
-    loading={loading}
-    block
-  >
-    Submit All Medical Data
-  </Button>
+  type="default"
+  size="large"
+  icon={<FileTextOutlined />}
+  onClick={() => exportDSEFile()}
+  style={{ marginTop: "12px" }}
+  block
+>
+  Export to DSE
+</Button>
+<Button
+  type="default"
+  icon={<ExperimentOutlined />}
+  onClick={handleAISuggestions}
+  loading={aiLoading}
+  style={{ marginLeft: 12 }}
+>
+  Smart Auto-Fill
+</Button>
  
 </TabPane>
 

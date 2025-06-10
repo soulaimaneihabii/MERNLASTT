@@ -109,6 +109,8 @@ const upload = multer({
  */
 router.get("/", protect, authorize("doctor", "admin"), getPatients)
 
+  
+
 /**
  * @swagger
  * /api/patients/doctor/{doctorId}:
@@ -301,6 +303,7 @@ router.delete("/:id", protect, authorize("admin"), deletePatient)
  *         description: Not authorized
  */
 router.get("/:id/export", protect, authorize("doctor", "admin","patient"), exportPatientData)
+router.post('/upload-medical-file/:id', upload.array('files', 10), uploadMedicalFile);
 
 /**
  * @swagger

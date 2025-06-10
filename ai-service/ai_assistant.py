@@ -1,7 +1,11 @@
 # routes/ai_assistant.py
 from flask import Blueprint, request, jsonify
 import time
+from flask_cors import CORS
 
+
+app = Flask(__name__)
+CORS(app)
 ai_assistant_bp = Blueprint('ai_assistant', __name__)
 
 @ai_assistant_bp.route('/ai/assist', methods=['POST'])
@@ -41,3 +45,5 @@ def ai_assist():
             "suggestedFields": suggested_fields
         }
     })
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)

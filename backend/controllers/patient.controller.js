@@ -2,9 +2,11 @@ import asyncHandler from "../middleware/asyncHandler.js"
 import Patient from "../models/Patient.model.js"
 import websocketService from "../services/websocket.service.js"
 // import notificationService from "../services/notification.service.js"
-import aiService from "../services/ai.service.js"
+
 import Prediction from "../models/Prediction.model.js"
 import PDFDocument from "pdfkit";
+import { scanDocument } from "../services/scanDocument.js";
+import fs from "fs";
 // @desc    Get all patients
 // @route   GET /api/patients
 // @access  Private/Doctor
@@ -501,42 +503,60 @@ export const validatePredictionData = asyncHandler(async (req, res) => {
 // @desc    Upload medical file for patient
 // @route   POST /api/patients/:id/upload
 // @access  Private/Doctor or Admin
+
 export const uploadMedicalFile = asyncHandler(async (req, res) => {
-  const patient = await Patient.findById(req.params.id)
+  const patient = await Patient.findById(req.params.id);
 
   if (!patient) {
-    res.status(404)
-    throw new Error("Patient not found")
+    res.status(404);
+    throw new Error("Patient not found");
   }
 
-  // Check if doctor has access to this patient
   if (req.user.role === "doctor" && patient.doctor.toString() !== req.user.id) {
-    res.status(403)
-    throw new Error("Not authorized to upload files for this patient")
+    res.status(403);
+    throw new Error("Not authorized");
   }
 
-  // Check if file exists
-  if (!req.file) {
-    res.status(400)
-    throw new Error("Please upload a file")
+  if (!req.files || req.files.length === 0) {
+    res.status(400);
+    throw new Error("Please upload at least one file");
   }
 
-  // Add file to patient's medical files
-  const fileData = {
-    name: req.file.originalname,
-    type: req.file.mimetype,
-    size: req.file.size,
-    uid: req.file.filename,
-    url: req.file.path,
-    uploadDate: new Date(),
+  const uploadedFiles = [];
+
+  for (const file of req.files) {
+    console.log("📄 Scanning:", file.path);
+
+    const scannedText = await scanDocument(file.path);
+
+    const parsedData = {
+      diagnosis: scannedText.match(/Diagnosis:\s*(.*)/)?.[1] || "",
+      medications: scannedText.match(/Medications:\s*(.*)/)?.[1]?.split(",") || [],
+      allergies: scannedText.match(/Allergies:\s*(.*)/)?.[1]?.split(",") || [],
+    };
+
+    patient.documents.push({
+      fileUrl: `/uploads/${file.filename}`,
+      originalName: file.originalname,
+      scannedText,
+      extractedData: parsedData,
+      uploadDate: new Date(),
+    });
+
+    uploadedFiles.push({
+      originalName: file.originalname,
+      parsedData,
+    });
+
+    // Optional: delete temp file
+    fs.unlinkSync(file.path);
   }
 
-  patient.medicalFiles.push(fileData)
-  await patient.save()
+  await patient.save();
 
-  res.status(200).json({
+  res.json({
     success: true,
-    data: fileData,
-    message: "File uploaded successfully",
-  })
-})
+    uploadedFiles,
+    message: "Files uploaded and scanned",
+  });
+});
