@@ -159,8 +159,8 @@ const Layout = () => {
           style={{
             backgroundColor: isDarkMode ? "#1f1f1f" : "#fffff",
             color: "#ffffff",
-            fontSize:18,
-            padding:20 ,
+            fontSize:16,
+            
           }}
         />
       </Sider>
