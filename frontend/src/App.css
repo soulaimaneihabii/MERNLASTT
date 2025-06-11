@@ -1,5 +1,9 @@
 .App {
   text-align: center;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  background-color: #ffffff;
+  color: #3e5672;
 }
 
 .App-logo {
@@ -14,7 +18,7 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: #3e5672;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -22,10 +26,20 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 
 .App-link {
-  color: #61dafb;
+  color: #44d5ee;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.App-link:hover {
+  color: #1890ff;
+  text-decoration: underline;
 }
 
 @keyframes App-logo-spin {
