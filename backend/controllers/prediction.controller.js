@@ -107,14 +107,19 @@ export const createPrediction = asyncHandler(async (req, res) => {
 
     console.log("✅ AI Prediction:", aiPrediction);
 
+    // ✅ Normalize the risk level for database consistency
+  const predictionResult = aiPrediction.risk_level || "Unknown"; // ✅ Trust the AI's label
+const resultRisk = aiPrediction.result_risk || "unknown";      // ✅ for internal use
+
+
     const prediction = await Prediction.create({
       patient: patientId,
       doctor: req.user.id,
       result: {
-        risk: aiPrediction.result_risk || "unknown",    // ✅ FIXED
-        score: aiPrediction.confidence || 0.8,          // ✅ FIXED
+        risk: aiPrediction.result_risk || "unknown",
+        score: aiPrediction.confidence || 0.8,
       },
-      predictionResult: aiPrediction.risk_level || "Unknown",  // ✅ UI display field
+      predictionResult, // ✅ Use normalized risk level here
       confidence: aiPrediction.confidence,
       diseaseTypes: aiPrediction.chronic_disease_types || [],
       recommendations: aiPrediction.recommendations || [],
@@ -255,52 +260,52 @@ export const deletePrediction = asyncHandler(async (req, res) => {
 // @desc    Get prediction statistics
 // @route   GET /api/predictions/stats
 // @access  Private/Doctor or Admin
+// @desc    Get prediction statistics (ALL predictions by risk type)
 export const getPredictionStats = asyncHandler(async (req, res) => {
-  const isDoctor = req.user.role === "doctor"
-  const matchCondition = isDoctor ? { doctor: req.user.id } : {}
+  const isDoctor = req.user.role === "doctor";
+  const matchCondition = isDoctor ? { doctor: req.user.id } : {};
 
-  // Get basic stats
-  const totalPredictions = await Prediction.countDocuments(matchCondition)
-  const pendingPredictions = await Prediction.countDocuments({ ...matchCondition, status: "pending" })
-  const confirmedPredictions = await Prediction.countDocuments({ ...matchCondition, status: "confirmed" })
-  const highRiskPredictions = await Prediction.countDocuments({
-    ...matchCondition,
-    predictionResult: { $in: ["High Risk", "Critical Risk"] },
-  })
+ const raw = await Prediction.aggregate([
+  { $match: matchCondition },
+  {
+    $group: {
+      _id: { $toLower: "$result.risk" }, // 🔧 use lowercase for consistency
+      count: { $sum: 1 }
+    }
+  }
+])
+;
 
-  // Get accuracy rate
-  const accuracyRate = totalPredictions > 0 ? (confirmedPredictions / totalPredictions) * 100 : 0
+  const normalized = { high: 0, medium: 0, low: 0 };
+  const map = {
+    high: "high",
+    "high risk": "high",
+    critical: "high",
+    moderate: "medium",
+    medium: "medium",
+    low: "low",
+    "low risk": "low",
+  };
 
-  // Get risk distribution
-  const riskDistribution = await Prediction.aggregate([
-    { $match: matchCondition },
-    {
-      $group: {
-        _id: "$predictionResult",
-        count: { $sum: 1 },
-      },
-    },
-  ])
+  raw.forEach((item) => {
+    const key = map[item._id] || null;
+    if (key && normalized[key] !== undefined) {
+      normalized[key] += item.count;
+    }
+  });
 
-  // Get recent predictions
-  const recentPredictions = await Prediction.find(matchCondition)
-    .populate("patient", "firstName lastName")
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .select("predictionResult confidence status createdAt")
+  const riskDistribution = [
+    { _id: "high", count: normalized.high },
+    { _id: "medium", count: normalized.medium },
+    { _id: "low", count: normalized.low },
+  ];
 
   res.status(200).json({
     success: true,
     data: {
-      overview: {
-        totalPredictions,
-        pendingPredictions,
-        confirmedPredictions,
-        highRiskPredictions,
-        accuracyRate: Math.round(accuracyRate * 100) / 100,
-      },
       riskDistribution,
-      recentPredictions,
+      totalPredictions: normalized.high + normalized.medium + normalized.low,
     },
-  })
-})
+  });
+});
+

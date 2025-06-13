@@ -16,7 +16,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
   // Basic counts
   const [totalPatients, totalPredictions, recentPredictions, highRiskPredictions] = await Promise.all([
-    Patient.countDocuments(isDoctor ? { doctor: req.user.id } : {}),
+    Patient.countDocuments(matchCondition),
     Prediction.countDocuments(matchCondition),
     Prediction.countDocuments({
       ...matchCondition,
@@ -24,7 +24,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     }),
     Prediction.countDocuments({
       ...matchCondition,
-      predictionResult: { $in: ["High Risk", "Critical Risk"] },
+      predictionResult: { $in: ["High Risk", "Critical Risk", "High"] },
     }),
   ]);
 
@@ -47,11 +47,10 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       },
     },
   ]);
-
   const accuracy = accuracyStats[0];
   const accuracyRate = accuracy ? (accuracy.confirmed / accuracy.total) * 100 : 0;
 
-  // Recent activity
+  // Recent predictions
   const recentActivity = await Prediction.find(matchCondition)
     .populate("patient", "firstName lastName age")
     .populate("doctor", "name")
@@ -59,20 +58,29 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     .limit(5)
     .select("predictionResult confidence status createdAt");
 
-  // Risk distribution
-  const riskDistribution = await Prediction.aggregate([
-    { $match: matchCondition },
-    {
-      $group: {
-        _id: "$predictionResult",
-        count: { $sum: 1 },
-      },
-    },
-  ]);
+  // ✅ Fix for Risk Distribution
+  const rawPredictions = await Prediction.find(matchCondition).select("predictionResult");
+  let riskDistribution = { high: 0, medium: 0, low: 0 };
 
-  // 🚀 Add admin-specific stats
+  rawPredictions.forEach(p => {
+    const level = (p.predictionResult || "").toLowerCase().trim();
+    if (["high", "high risk", "critical", "critical risk"].includes(level)) {
+      riskDistribution.high++;
+    } else if (["moderate", "medium", "medium risk"].includes(level)) {
+      riskDistribution.medium++;
+    } else if (["low", "low risk"].includes(level)) {
+      riskDistribution.low++;
+    }
+  });
+
+  const riskDistributionArray = [
+    { _id: "High", count: riskDistribution.high },
+    { _id: "Medium", count: riskDistribution.medium },
+    { _id: "Low", count: riskDistribution.low }
+  ];
+
+  // Admin-only user stats
   let userStats = null;
-
   if (req.user.role === "admin") {
     const users = await User.aggregate([
       {
@@ -112,12 +120,14 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         accuracyRate: Math.round(accuracyRate * 100) / 100,
       },
       accuracy: accuracy || { total: 0, confirmed: 0, rejected: 0, pending: 0 },
-      riskDistribution,
+      riskDistribution: riskDistributionArray,
       recentActivity,
-      userStats,  // only if admin
+      userStats,
     },
   });
 });
+
+
 
 
 // @desc    Get prediction analytics

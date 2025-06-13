@@ -160,5 +160,13 @@ export const appointmentsAPI = {
   deleteAppointment: (id) => api.delete(`/appointments/${id}`),
   getAppointmentById: (id) => api.get(`/appointments/${id}`),
 }
+export const analyticsAPI = {
+  getDashboardStats: () => api.get("/analytics/dashboard"),
+  getPredictionAnalytics: (period = "30d") => api.get(`/analytics/predictions?period=${period}`),
+  getPatientAnalytics: () => api.get("/analytics/patients"),
+  getUserAnalytics: () => api.get("/analytics/users"),
+  getSystemHealth: () => api.get("/analytics/system-health"),
+  getPatientsPerDoctor: () => api.get("/analytics/patients-per-doctor"),
+}
 
 export default api

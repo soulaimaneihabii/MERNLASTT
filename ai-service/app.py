@@ -100,20 +100,27 @@ def predict():
         disease_types = get_chronic_disease_types(patient_data)
         confidence = float(max(prediction_proba))
 
-        result_risk = 'medium'
-        risk_level = 'Moderate'
-
+        # ✅ UPDATED LOGIC TO HANDLE ALL CASES
         if prediction == 1:
-            if confidence > 0.8:
+            if confidence >= 0.75:
                 risk_level = 'High'
                 result_risk = 'high'
-            elif confidence > 0.6:
+            elif confidence >= 0.5:
                 risk_level = 'Moderate'
                 result_risk = 'medium'
-        else:
-            if confidence > 0.8:
+            else:
                 risk_level = 'Low'
                 result_risk = 'low'
+        else:
+            if confidence >= 0.75:
+                risk_level = 'Low'
+                result_risk = 'low'
+            elif confidence >= 0.5:
+                risk_level = 'Moderate'
+                result_risk = 'medium'
+            else:
+                risk_level = 'High'
+                result_risk = 'high'
 
         response = {
             'success': True,

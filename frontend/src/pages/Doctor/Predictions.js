@@ -18,7 +18,11 @@ import {
 } from "antd";
 import { RocketOutlined, EyeOutlined } from "@ant-design/icons";
 import { fetchPatients } from "../../store/slices/patientsSlice";
-import { createPrediction, fetchPredictions } from "../../store/slices/predictionsSlice";
+import {
+  createPrediction,
+  fetchPredictions,
+  fetchPredictionStats,
+} from "../../store/slices/predictionsSlice";
 import { Pie } from "@ant-design/plots";
 
 const { Title, Text } = Typography;
@@ -59,7 +63,7 @@ const buildMedicalData = (p) => ({
 const Predictions = () => {
   const dispatch = useDispatch();
   const { patients = [] } = useSelector((state) => state.patients);
-  const { predictions = [], loading } = useSelector((state) => state.predictions);
+  const { predictions = [], loading, stats = {} } = useSelector((state) => state.predictions);
   const { user } = useSelector((state) => state.auth);
 
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -71,6 +75,7 @@ const Predictions = () => {
     if (user?.id) {
       dispatch(fetchPatients({ doctorId: user.id }));
       dispatch(fetchPredictions({ doctorId: user.id }));
+      dispatch(fetchPredictionStats());
     }
   }, [dispatch, user?.id]);
 
@@ -106,8 +111,6 @@ const Predictions = () => {
 
     const medicalData = buildMedicalData(selectedPatient);
 
-    console.log("Sending AI prediction with data:", medicalData);
-
     try {
       const result = await dispatch(
         createPrediction({
@@ -116,8 +119,6 @@ const Predictions = () => {
           doctorId: user.id,
         })
       ).unwrap();
-
-      console.log("Prediction created successfully:", result);
 
       setPredictionResult(result.data);
       setIsModalVisible(true);
@@ -128,8 +129,8 @@ const Predictions = () => {
       });
 
       dispatch(fetchPredictions({ doctorId: user.id }));
+      dispatch(fetchPredictionStats());
     } catch (error) {
-      console.error("Prediction error:", error);
       notification.error({
         message: "Error",
         description: `Failed to create prediction: ${error.message}`,
@@ -142,8 +143,7 @@ const Predictions = () => {
       title: "Patient",
       dataIndex: ["patient", "firstName"],
       key: "patient",
-      render: (firstName, record) =>
-        `${firstName} ${record.patient?.lastName || ""}`,
+      render: (firstName, record) => `${firstName} ${record.patient?.lastName || ""}`,
     },
     {
       title: "Date",
@@ -153,11 +153,10 @@ const Predictions = () => {
     },
     {
       title: "Risk Level",
-      dataIndex: "riskLevel",
-      key: "riskLevel",
+      dataIndex: "predictionResult",
+      key: "predictionResult",
       render: (risk) => {
-        const color =
-          risk === "High" ? "red" : risk === "Moderate" ? "orange" : "green";
+        const color = risk === "High" ? "red" : risk === "Moderate" ? "orange" : "green";
         return <Tag color={color}>{risk || "Unknown"}</Tag>;
       },
     },
@@ -169,13 +168,7 @@ const Predictions = () => {
         <Progress
           percent={Math.round((confidence || 0) * 100)}
           size="small"
-          status={
-            confidence > 0.8
-              ? "success"
-              : confidence > 0.6
-              ? "normal"
-              : "exception"
-          }
+          status={confidence > 0.8 ? "success" : confidence > 0.6 ? "normal" : "exception"}
         />
       ),
     },
@@ -188,7 +181,6 @@ const Predictions = () => {
             type="link"
             icon={<EyeOutlined />}
             onClick={() => {
-              console.log("View details record:", record);
               setPredictionResult(record);
               setIsModalVisible(true);
             }}
@@ -200,10 +192,10 @@ const Predictions = () => {
     },
   ];
 
-  const riskDistributionData = ["High", "Moderate", "Low"].map((riskLevel) => ({
-    type: riskLevel,
-    value: predictions.filter((p) => p.riskLevel === riskLevel).length,
-  }));
+  const riskDistributionData = stats?.riskDistribution?.map((item) => ({
+    type: item._id === "high" ? "High" : item._id === "medium" ? "Moderate" : "Low",
+    value: item.count,
+  })) || [];
 
   return (
     <div>
@@ -241,8 +233,7 @@ const Predictions = () => {
                 <div style={{ background: "#f5f5f5", padding: 12 }}>
                   <Text strong>Selected Patient:</Text> <br />
                   <Text>
-                    {selectedPatient.firstName || ""}{" "}
-                    {selectedPatient.lastName || ""}
+                    {selectedPatient.firstName || ""} {selectedPatient.lastName || ""}
                   </Text>
                   <br />
                   <Text type="secondary">Ready for AI: ✅</Text>
@@ -254,9 +245,7 @@ const Predictions = () => {
                 icon={<RocketOutlined />}
                 size="large"
                 onClick={handleRunPrediction}
-                disabled={
-                  !selectedPatient || !isPatientReadyForAI(selectedPatient)
-                }
+                disabled={!selectedPatient || !isPatientReadyForAI(selectedPatient)}
                 loading={loading}
               >
                 Generate AI Prediction
@@ -267,7 +256,7 @@ const Predictions = () => {
 
         <Col xs={24} md={12}>
           <Card title="Risk Distribution">
-            {predictions.length === 0 ? (
+            {riskDistributionData.length === 0 ? (
               <div style={{ textAlign: "center", padding: 40 }}>
                 <Text type="secondary">No predictions yet</Text>
               </div>
@@ -278,10 +267,15 @@ const Predictions = () => {
                 colorField="type"
                 radius={0.9}
                 label={{
-                 
-                  labelHeight: 28,
+                  type: 'outer',
                   content: ({ type, value, percent }) =>
-                    `${type} (${value}) - ${Math.round(percent * 100)}%`,
+                    `${type}: ${value} (${(percent * 100).toFixed(0)}%)`,
+                }}
+                tooltip={{
+                  formatter: (datum) => ({
+                    name: datum.type,
+                    value: datum.value,
+                  }),
                 }}
                 interactions={[{ type: "element-active" }]}
               />
@@ -299,8 +293,7 @@ const Predictions = () => {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} items`,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
           }}
         />
       </Card>

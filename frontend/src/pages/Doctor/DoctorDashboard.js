@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi'
 import Chart from 'react-apexcharts'
 import { fetchPatients } from '../../store/slices/patientsSlice'
+import { fetchDoctorDashboardStats } from '../../store/slices/analyticsSlice'
 import RiskTag from '../../components/Charts/RiskTag'
 import RiskSparkline from '../../components/Charts/RiskSparkline'
 import moment from 'moment'
@@ -21,9 +22,11 @@ const DoctorDashboard = () => {
   const dispatch = useDispatch()
   const { patients = [], loading } = useSelector((s) => s.patients)
   const { user } = useSelector((s) => s.auth)
+  const { dashboardStats, loading: analyticsLoading } = useSelector((s) => s.analytics)
 
   useEffect(() => {
     if (user?.id) dispatch(fetchPatients({ doctorId: user.id }))
+    dispatch(fetchDoctorDashboardStats())
   }, [dispatch, user])
 
   const HIGH_RISK_THRESHOLD = 0.8
@@ -45,44 +48,39 @@ const DoctorDashboard = () => {
     return !lastVisit || moment().diff(lastVisit, 'months') >= 6
   }).length
 
-  const counts = { high: 0, medium: 0, low: 0 }
-  patients.forEach((p) => {
-    const hist = Array.isArray(p.riskHistory) ? p.riskHistory : []
-    const score = hist.length ? hist[hist.length - 1].score : 0
-    if (score > 0.8) counts.high++
-    else if (score > 0.5) counts.medium++
-    else counts.low++
+  const riskDistribution = dashboardStats?.riskDistribution || []
+  const recentPredictions = dashboardStats?.recentActivity || []
+
+  const topPatients = recentPredictions.map(pred => ({
+    _id: pred._id,
+    firstName: pred.patient?.firstName || "",
+    lastName: pred.patient?.lastName || "",
+    latestRisk: pred.confidence || 0,
+    riskHistory: [{ score: pred.confidence }]
+  }))
+
+  const riskCounts = { high: 0, medium: 0, low: 0 }
+  riskDistribution.forEach((item) => {
+    const id = item._id?.toLowerCase()
+    if (["high", "high risk", "critical", "critical risk"].includes(id)) riskCounts.high = item.count
+    else if (["medium", "moderate", "medium risk"].includes(id)) riskCounts.medium = item.count
+    else if (["low", "low risk"].includes(id)) riskCounts.low = item.count
   })
 
   const stackedData = {
     series: [
-      {
-        name: 'High',
-        data: [counts.high]
-      },
-      {
-        name: 'Medium',
-        data: [counts.medium]
-      },
-      {
-        name: 'Low',
-        data: [counts.low]
-      }
+      { name: "High", data: [riskCounts.high] },
+      { name: "Medium", data: [riskCounts.medium] },
+      { name: "Low", data: [riskCounts.low] },
     ],
     options: {
-      chart: {
-        type: 'bar',
-        stacked: true,
-        toolbar: { show: false }
-      },
-      colors: ['#ff4d4f', '#faad14', '#52c41a'],
-      xaxis: {
-        categories: ['Patients']
-      },
-      legend: {
-        position: 'bottom'
-      }
-    }
+      chart: { type: "bar", stacked: true, toolbar: { show: false } },
+      colors: ["#ff4d4f", "#faad14", "#52c41a"],
+      xaxis: { categories: ["Predictions"] },
+      legend: { position: "bottom" },
+      plotOptions: { bar: { horizontal: false } },
+      dataLabels: { enabled: true },
+    },
   }
 
   const patientsByMonth = {}
@@ -94,22 +92,15 @@ const DoctorDashboard = () => {
   })
 
   const patientsOverTimeData = {
-    series: [
-      {
-        name: 'Patients',
-        data: Object.entries(patientsByMonth)
-          .sort(([a], [b]) => moment(a).diff(moment(b)))
-          .map(([, count]) => count)
-      }
-    ],
+    series: [{
+      name: 'Patients',
+      data: Object.entries(patientsByMonth)
+        .sort(([a], [b]) => moment(a).diff(moment(b)))
+        .map(([, count]) => count)
+    }],
     options: {
-      chart: {
-        type: 'line',
-        toolbar: { show: false }
-      },
-      stroke: {
-        curve: 'smooth'
-      },
+      chart: { type: 'line', toolbar: { show: false } },
+      stroke: { curve: 'smooth' },
       xaxis: {
         categories: Object.entries(patientsByMonth)
           .sort(([a], [b]) => moment(a).diff(moment(b)))
@@ -118,45 +109,16 @@ const DoctorDashboard = () => {
     }
   }
 
-  const topPatients = [...patients]
-    .map((p) => {
-      const hist = Array.isArray(p.riskHistory) ? p.riskHistory : []
-      const score = hist.length ? hist[hist.length - 1].score : 0
-      return { ...p, latestRisk: score }
-    })
-    .sort((a, b) => b.latestRisk - a.latestRisk)
-    .slice(0, 5)
-
   const patientsWithoutVisit = patients.filter((p) => {
     const lastVisit = p.lastVisit ? moment(p.lastVisit) : null
     return !lastVisit || moment().diff(lastVisit, 'months') >= 6
   })
 
   const statCards = [
-    {
-      label: 'Total Patients',
-      value: totalPatients,
-      icon: <FiUsers size={28} />,
-      color: '#e3f2fd'
-    },
-    {
-      label: 'High-Risk Patients',
-      value: highRiskCount,
-      icon: <FiAlertTriangle size={28} />,
-      color: '#fdecea'
-    },
-    {
-      label: 'New This Month',
-      value: newPatientsThisMonth,
-      icon: <FiUserPlus size={28} />,
-      color: '#e8f5e9'
-    },
-    {
-      label: 'No Recent Visit',
-      value: noRecentVisitCount,
-      icon: <FiClock size={28} />,
-      color: '#fff3e0'
-    }
+    { label: 'Total Patients', value: totalPatients, icon: <FiUsers size={28} />, color: '#e3f2fd' },
+    { label: 'High-Risk Patients', value: highRiskCount, icon: <FiAlertTriangle size={28} />, color: '#fdecea' },
+    { label: 'New This Month', value: newPatientsThisMonth, icon: <FiUserPlus size={28} />, color: '#e8f5e9' },
+    { label: 'No Recent Visit', value: noRecentVisitCount, icon: <FiClock size={28} />, color: '#fff3e0' }
   ]
 
   return (
@@ -183,6 +145,7 @@ const DoctorDashboard = () => {
         <Col xs={24} md={12}>
           <Card title="Risk Distribution">
             <Chart options={stackedData.options} series={stackedData.series} type="bar" height={300} />
+            {console.log("📊 Risk distribution frontend:", riskDistribution)}
           </Card>
         </Col>
         <Col xs={24} md={12}>
@@ -219,7 +182,7 @@ const DoctorDashboard = () => {
               pagination={false}
               size="small"
               rowKey="_id"
-              loading={loading}
+              loading={loading || analyticsLoading}
             />
           </Card>
         </Col>
