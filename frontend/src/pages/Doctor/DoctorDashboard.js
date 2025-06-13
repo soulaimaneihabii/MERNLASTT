@@ -1,14 +1,10 @@
+// DoctorDashboard.js
 "use client"
 
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Card, Row, Col, Typography, Table } from 'antd'
-import {
-  FiUsers,
-  FiAlertTriangle,
-  FiUserPlus,
-  FiClock
-} from 'react-icons/fi'
+import { FiUsers, FiAlertTriangle, FiUserPlus, FiClock } from 'react-icons/fi'
 import Chart from 'react-apexcharts'
 import { fetchPatients } from '../../store/slices/patientsSlice'
 import { fetchDoctorDashboardStats } from '../../store/slices/analyticsSlice'
@@ -30,22 +26,13 @@ const DoctorDashboard = () => {
   }, [dispatch, user])
 
   const HIGH_RISK_THRESHOLD = 0.8
-  const totalPatients = patients.length
-
-  const highRiskCount = patients.filter((p) => {
-    const hist = Array.isArray(p.riskHistory) ? p.riskHistory : []
-    const score = hist.length ? hist[hist.length - 1].score : 0
-    return score > HIGH_RISK_THRESHOLD
-  }).length
+  const totalPatients = dashboardStats?.overview?.totalPatients || patients.length
+  const highRiskCount = dashboardStats?.overview?.highRiskPredictions || 0
+  const noRecentVisitCount = dashboardStats?.noRecentVisitCount || 0
 
   const startOfMonth = moment().startOf('month')
   const newPatientsThisMonth = patients.filter((p) => {
     return p.createdAt && moment(p.createdAt).isAfter(startOfMonth)
-  }).length
-
-  const noRecentVisitCount = patients.filter((p) => {
-    const lastVisit = p.lastVisit ? moment(p.lastVisit) : null
-    return !lastVisit || moment().diff(lastVisit, 'months') >= 6
   }).length
 
   const riskDistribution = dashboardStats?.riskDistribution || []
@@ -68,29 +55,13 @@ const DoctorDashboard = () => {
   })
 
   const barData = {
-    series: [
-      {
-        name: 'Predictions',
-        data: [riskCounts.high, riskCounts.medium, riskCounts.low]
-      }
-    ],
+    series: [{ name: 'Predictions', data: [riskCounts.high, riskCounts.medium, riskCounts.low] }],
     options: {
       chart: { type: 'bar', toolbar: { show: false } },
       colors: ['#ff4d4f', '#faad14', '#52c41a'],
-      xaxis: {
-        categories: ['High', 'Medium', 'Low']
-      },
-      dataLabels: {
-        enabled: true,
-        style: { colors: ['#fff'] }
-      },
-      plotOptions: {
-        bar: {
-          horizontal: false,
-          columnWidth: '40%',
-          distributed: true
-        }
-      },
+      xaxis: { categories: ['High', 'Medium', 'Low'] },
+      dataLabels: { enabled: true, style: { colors: ['#fff'] } },
+      plotOptions: { bar: { horizontal: false, columnWidth: '40%', distributed: true } },
       legend: { show: false },
     }
   }
@@ -106,9 +77,7 @@ const DoctorDashboard = () => {
   const patientsOverTimeData = {
     series: [{
       name: 'Patients',
-      data: Object.entries(patientsByMonth)
-        .sort(([a], [b]) => moment(a).diff(moment(b)))
-        .map(([, count]) => count)
+      data: Object.entries(patientsByMonth).sort(([a], [b]) => moment(a).diff(moment(b))).map(([, count]) => count)
     }],
     options: {
       chart: { type: 'line', toolbar: { show: false } },
@@ -123,7 +92,7 @@ const DoctorDashboard = () => {
 
   const patientsWithoutVisit = patients.filter((p) => {
     const lastVisit = p.lastVisit ? moment(p.lastVisit) : null
-    return !lastVisit || moment().diff(lastVisit, 'months') >= 6
+    return !lastVisit || !lastVisit.isValid() || moment().diff(lastVisit, 'months') >= 6
   })
 
   const statCards = [
@@ -171,23 +140,9 @@ const DoctorDashboard = () => {
           <Card title="Top High-Risk Patients">
             <Table
               columns={[
-                {
-                  title: 'Name',
-                  key: 'name',
-                  render: (r) => `${r.firstName} ${r.lastName}`
-                },
-                {
-                  title: 'Latest Risk',
-                  key: 'latestRisk',
-                  render: (r) => <RiskTag score={r.latestRisk} />
-                },
-                {
-                  title: 'Trend',
-                  key: 'trend',
-                  render: (r) => (
-                    <RiskSparkline data={r.riskHistory || []} width={100} height={30} />
-                  )
-                }
+                { title: 'Name', key: 'name', render: (r) => `${r.firstName} ${r.lastName}` },
+                { title: 'Latest Risk', key: 'latestRisk', render: (r) => <RiskTag score={r.latestRisk} /> },
+                { title: 'Trend', key: 'trend', render: (r) => <RiskSparkline data={r.riskHistory || []} width={100} height={30} /> }
               ]}
               dataSource={topPatients}
               pagination={false}
@@ -202,22 +157,9 @@ const DoctorDashboard = () => {
           <Card title="Patients With No Recent Visit">
             <Table
               columns={[
-                {
-                  title: 'Name',
-                  key: 'name',
-                  render: (r) => `${r.firstName} ${r.lastName}`
-                },
-                {
-                  title: 'Last Visit',
-                  key: 'lastVisit',
-                  render: (r) =>
-                    r.lastVisit ? moment(r.lastVisit).format('YYYY-MM-DD') : 'No Visit'
-                },
-                {
-                  title: 'Status',
-                  dataIndex: 'status',
-                  key: 'status'
-                }
+                { title: 'Name', key: 'name', render: (r) => `${r.firstName} ${r.lastName}` },
+                { title: 'Last Visit', key: 'lastVisit', render: (r) => r.lastVisit ? moment(r.lastVisit).format('YYYY-MM-DD') : 'No Visit' },
+                { title: 'Status', dataIndex: 'status', key: 'status' }
               ]}
               dataSource={patientsWithoutVisit}
               pagination={false}

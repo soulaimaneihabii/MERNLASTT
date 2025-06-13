@@ -14,6 +14,17 @@ export const fetchDoctorDashboardStats = createAsyncThunk(
     }
   }
 );
+export const fetchDoctorDashboardStatse = createAsyncThunk(
+  "analytics/fetchDoctorDashboardStats",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await analyticsAPI.getDoctorDashboardStats();
+      return res.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
+  }
+);
 
 const analyticsSlice = createSlice({
   name: "analytics",
@@ -34,6 +45,17 @@ const analyticsSlice = createSlice({
         state.dashboardStats = action.payload;
       })
       .addCase(fetchDoctorDashboardStats.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+        .addCase(fetchDoctorDashboardStatse.pending, state => {
+        state.loading = true;
+      })
+      .addCase(fetchDoctorDashboardStatse.fulfilled, (state, action) => {
+        state.loading = false;
+        state.dashboardStats = action.payload;
+      })
+      .addCase(fetchDoctorDashboardStatse.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

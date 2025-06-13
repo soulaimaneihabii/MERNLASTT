@@ -5,7 +5,7 @@ import {
   getPatientAnalytics,
   getUserAnalytics,
   getSystemHealth,
-  getPatientsPerDoctor,  // 🚀 Add this!
+  getPatientsPerDoctor, fetchDoctorDashboardStatse, // 🚀 Add this!
 } from "../controllers/analytics.controller.js";
 import { protect, authorize } from "../middleware/auth.middleware.js"
 
@@ -27,6 +27,8 @@ const router = express.Router()
  */
 router.get("/dashboard", protect, authorize("admin", "doctor"), getDashboardStats)
 router.get("/patients-per-doctor", protect, authorize("admin"), getPatientsPerDoctor);
+router.get("/dashboard",protect, authorize("doctor"), fetchDoctorDashboardStatse);
+
 /**
  * @swagger
  * /api/analytics/predictions:

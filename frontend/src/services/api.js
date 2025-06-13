@@ -167,6 +167,9 @@ export const analyticsAPI = {
   getUserAnalytics: () => api.get("/analytics/users"),
   getSystemHealth: () => api.get("/analytics/system-health"),
   getPatientsPerDoctor: () => api.get("/analytics/patients-per-doctor"),
+  
+  getDoctorDashboardStats: async () => axios.get("/api/analytics/dashboard"),
+
 }
 
 export default api

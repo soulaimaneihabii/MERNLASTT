@@ -534,3 +534,60 @@ export const getPatientsPerDoctor = asyncHandler(async (req, res) => {
         data: patientsPerDoctor,
     });
 });
+export const fetchDoctorDashboardStatse = asyncHandler(async (req, res) => {
+  const doctorId = req.user.id;
+
+  // Fetch patients with latest prediction (score & date)
+  const patients = await Patient.aggregate([
+    { $match: { doctor: req.user.id } },
+    {
+      $lookup: {
+        from: "predictions",
+        let: { patientId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$patient", "$$patientId"] },
+                  { $eq: ["$doctor", req.user._id] }
+                ]
+              }
+            }
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 7 }  // Last 7 predictions, adjust as needed
+        ],
+        as: "riskHistory"
+      }
+    },
+    {
+      $addFields: {
+        latestScore: {
+          $cond: [
+            { $gt: [{ $size: "$riskHistory" }, 0] },
+            { $arrayElemAt: ["$riskHistory.score", 0] },
+            null
+          ]
+        }
+      }
+    }
+  ]);
+
+  // Compute the summary counts
+  const totalPatients = patients.length;
+  const highRiskCount = patients.filter(p => p.latestScore > 0.8).length;
+  const noRecentVisitCount = patients.filter(p => {
+    return !p.lastVisit || new Date() - new Date(p.lastVisit) >= 6 * 30 * 24 * 60 * 60 * 1000;
+  }).length;
+
+  res.json({
+    success: true,
+    data: {
+      totalPatients,
+      highRiskCount,
+      noRecentVisitCount,
+      patients
+    }
+  });
+});
