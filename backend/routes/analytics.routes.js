@@ -27,7 +27,7 @@ const router = express.Router()
  */
 router.get("/dashboard", protect, authorize("admin", "doctor"), getDashboardStats)
 router.get("/patients-per-doctor", protect, authorize("admin"), getPatientsPerDoctor);
-router.get("/dashboard",protect, authorize("doctor"), fetchDoctorDashboardStatse);
+router.get("/doctor-dashboard",protect, authorize("doctor"), fetchDoctorDashboardStatse);
 
 /**
  * @swagger

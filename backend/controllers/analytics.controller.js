@@ -3,7 +3,7 @@ import User from "../models/User.model.js"
 import Patient from "../models/Patient.model.js"
 import Prediction from "../models/Prediction.model.js"
 import aiService from "../services/ai.service.js"
-
+import mongoose from "mongoose"
 // @desc    Get dashboard statistics
 // @route   GET /api/analytics/dashboard
 // @access  Private/Doctor or Admin
@@ -535,59 +535,85 @@ export const getPatientsPerDoctor = asyncHandler(async (req, res) => {
     });
 });
 export const fetchDoctorDashboardStatse = asyncHandler(async (req, res) => {
-  const doctorId = req.user.id;
+  const doctorId = new mongoose.Types.ObjectId(req.user._id);
 
-  // Fetch patients with latest prediction (score & date)
   const patients = await Patient.aggregate([
-    { $match: { doctor: req.user.id } },
+    { $match: { doctor: doctorId } },
     {
       $lookup: {
         from: "predictions",
-        let: { patientId: "$_id" },
+        let: {
+          patientId: "$_id",
+          doctorId: doctorId
+        },
         pipeline: [
           {
             $match: {
               $expr: {
                 $and: [
                   { $eq: ["$patient", "$$patientId"] },
-                  { $eq: ["$doctor", req.user._id] }
+                  { $eq: ["$doctor", "$$doctorId"] }
                 ]
               }
             }
           },
           { $sort: { createdAt: -1 } },
-          { $limit: 7 }  // Last 7 predictions, adjust as needed
+          { $limit: 5 },
+          {
+            $project: {
+              score: 1,
+              createdAt: 1,
+              predictionResult: 1
+            }
+          }
         ],
         as: "riskHistory"
       }
     },
     {
       $addFields: {
-        latestScore: {
+        latestPrediction: {
           $cond: [
             { $gt: [{ $size: "$riskHistory" }, 0] },
-            { $arrayElemAt: ["$riskHistory.score", 0] },
+            { $arrayElemAt: ["$riskHistory", 0] },
             null
           ]
         }
       }
+    },
+    {
+      $addFields: {
+        latestScore: "$latestPrediction.score",
+        latestRisk: "$latestPrediction.predictionResult"
+      }
     }
   ]);
 
-  // Compute the summary counts
-  const totalPatients = patients.length;
-  const highRiskCount = patients.filter(p => p.latestScore > 0.8).length;
-  const noRecentVisitCount = patients.filter(p => {
-    return !p.lastVisit || new Date() - new Date(p.lastVisit) >= 6 * 30 * 24 * 60 * 60 * 1000;
-  }).length;
+  // ✅ Add risk distribution based on predictions
+  const predictions = await Prediction.find({ doctor: doctorId }).select("predictionResult");
+
+  let riskCounts = { high: 0, medium: 0, low: 0 };
+  predictions.forEach(p => {
+    const level = (p.predictionResult || "").toLowerCase().trim();
+    if (["high", "high risk", "critical", "critical risk"].includes(level)) riskCounts.high++;
+    else if (["medium", "moderate", "medium risk"].includes(level)) riskCounts.medium++;
+    else if (["low", "low risk"].includes(level)) riskCounts.low++;
+  });
+
+  const riskDistribution = [
+    { _id: "High", count: riskCounts.high },
+    { _id: "Medium", count: riskCounts.medium },
+    { _id: "Low", count: riskCounts.low }
+  ];
 
   res.json({
     success: true,
     data: {
-      totalPatients,
-      highRiskCount,
-      noRecentVisitCount,
-      patients
+      totalPatients: patients.length,
+      highRiskCount: patients.filter(p => p.latestScore > 0.8).length,
+      noRecentVisitCount: patients.filter(p => !p.lastVisit || new Date() - new Date(p.lastVisit) >= 6 * 30 * 24 * 60 * 60 * 1000).length,
+      patients,
+      riskDistribution // ✅ include for chart
     }
   });
 });

@@ -168,7 +168,9 @@ export const analyticsAPI = {
   getSystemHealth: () => api.get("/analytics/system-health"),
   getPatientsPerDoctor: () => api.get("/analytics/patients-per-doctor"),
   
-  getDoctorDashboardStats: async () => axios.get("/api/analytics/dashboard"),
+ getDoctorDashboardStats: () => api.get("/analytics/doctor-dashboard")
+
+
 
 }
 
