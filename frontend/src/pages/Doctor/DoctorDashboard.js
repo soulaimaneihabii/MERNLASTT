@@ -67,20 +67,32 @@ const DoctorDashboard = () => {
     else if (["low", "low risk"].includes(id)) riskCounts.low = item.count
   })
 
-  const stackedData = {
+  const barData = {
     series: [
-      { name: "High", data: [riskCounts.high] },
-      { name: "Medium", data: [riskCounts.medium] },
-      { name: "Low", data: [riskCounts.low] },
+      {
+        name: 'Predictions',
+        data: [riskCounts.high, riskCounts.medium, riskCounts.low]
+      }
     ],
     options: {
-      chart: { type: "bar", stacked: true, toolbar: { show: false } },
-      colors: ["#ff4d4f", "#faad14", "#52c41a"],
-      xaxis: { categories: ["Predictions"] },
-      legend: { position: "bottom" },
-      plotOptions: { bar: { horizontal: false } },
-      dataLabels: { enabled: true },
-    },
+      chart: { type: 'bar', toolbar: { show: false } },
+      colors: ['#ff4d4f', '#faad14', '#52c41a'],
+      xaxis: {
+        categories: ['High', 'Medium', 'Low']
+      },
+      dataLabels: {
+        enabled: true,
+        style: { colors: ['#fff'] }
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '40%',
+          distributed: true
+        }
+      },
+      legend: { show: false },
+    }
   }
 
   const patientsByMonth = {}
@@ -144,8 +156,7 @@ const DoctorDashboard = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="Risk Distribution">
-            <Chart options={stackedData.options} series={stackedData.series} type="bar" height={300} />
-            {console.log("📊 Risk distribution frontend:", riskDistribution)}
+            <Chart options={barData.options} series={barData.series} type="bar" height={320} />
           </Card>
         </Col>
         <Col xs={24} md={12}>
