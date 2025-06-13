@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Card, Row, Col, Typography, Table } from 'antd'
-import { FiUsers, FiAlertTriangle, FiUserPlus, FiClock } from 'react-icons/fi'
+import { FiUsers, FiAlertTriangle, FiUserPlus } from 'react-icons/fi'
 import Chart from 'react-apexcharts'
 import { fetchPatients } from '../../store/slices/patientsSlice'
 import { fetchDoctorDashboardStats } from '../../store/slices/analyticsSlice'
@@ -28,7 +28,6 @@ const DoctorDashboard = () => {
   const HIGH_RISK_THRESHOLD = 0.8
   const totalPatients = dashboardStats?.overview?.totalPatients || patients.length
   const highRiskCount = dashboardStats?.overview?.highRiskPredictions || 0
-  const noRecentVisitCount = dashboardStats?.noRecentVisitCount || 0
 
   const startOfMonth = moment().startOf('month')
   const newPatientsThisMonth = patients.filter((p) => {
@@ -90,16 +89,12 @@ const DoctorDashboard = () => {
     }
   }
 
-  const patientsWithoutVisit = patients.filter((p) => {
-    const lastVisit = p.lastVisit ? moment(p.lastVisit) : null
-    return !lastVisit || !lastVisit.isValid() || moment().diff(lastVisit, 'months') >= 6
-  })
+  const activePatients = patients.filter((p) => p.status === 'Active')
 
   const statCards = [
     { label: 'Total Patients', value: totalPatients, icon: <FiUsers size={28} />, color: '#e3f2fd' },
     { label: 'High-Risk Patients', value: highRiskCount, icon: <FiAlertTriangle size={28} />, color: '#fdecea' },
-    { label: 'New This Month', value: newPatientsThisMonth, icon: <FiUserPlus size={28} />, color: '#e8f5e9' },
-    { label: 'No Recent Visit', value: noRecentVisitCount, icon: <FiClock size={28} />, color: '#fff3e0' }
+    { label: 'New This Month', value: newPatientsThisMonth, icon: <FiUserPlus size={28} />, color: '#e8f5e9' }
   ]
 
   return (
@@ -108,7 +103,7 @@ const DoctorDashboard = () => {
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {statCards.map((item, i) => (
-          <Col xs={24} md={6} key={i}>
+          <Col xs={24} sm={12} md={8} key={i}>
             <Card style={{ ...cardStyle, background: item.color }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -154,14 +149,14 @@ const DoctorDashboard = () => {
         </Col>
 
         <Col xs={24} md={12}>
-          <Card title="Patients With No Recent Visit">
+          <Card title="Active Patients">
             <Table
               columns={[
                 { title: 'Name', key: 'name', render: (r) => `${r.firstName} ${r.lastName}` },
                 { title: 'Last Visit', key: 'lastVisit', render: (r) => r.lastVisit ? moment(r.lastVisit).format('YYYY-MM-DD') : 'No Visit' },
                 { title: 'Status', dataIndex: 'status', key: 'status' }
               ]}
-              dataSource={patientsWithoutVisit}
+              dataSource={activePatients}
               pagination={false}
               size="small"
               rowKey="_id"
