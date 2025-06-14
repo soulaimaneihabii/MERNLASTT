@@ -1,8 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Card, Typography, Row, Col, Tabs, Statistic, Divider, Button } from "antd";
-import { UserOutlined, TeamOutlined, BarChartOutlined, PieChartOutlined } from "@ant-design/icons";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { UserOutlined, TeamOutlined } from "@ant-design/icons";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 import API from "../../services/api";
 
 const { Title } = Typography;
@@ -23,18 +34,20 @@ const GestionGlobale = () => {
 
   const fetchStats = async () => {
     try {
-      // Users data
       const usersRes = await API.get("/analytics/users");
-
       const roleDist = usersRes.data.data.roleDistribution || [];
       const totalUsers = roleDist.reduce((acc, item) => acc + item.count, 0);
       const doctors = roleDist.find((r) => r._id === "doctor")?.count || 0;
       const admins = roleDist.find((r) => r._id === "admin")?.count || 0;
       const activeUsers = roleDist.reduce((acc, item) => acc + item.active, 0);
 
-      // Patients per doctor (simulate for now or replace with your /dashboard/admin-stats)
-      const patientsRes = await API.get("/analytics/dashboard");
-      const patientsPerDoctor = patientsRes.data?.data?.patientsPerDoctor || [];
+      const patientsRes = await API.get("/analytics/patients-per-doctor");
+      const patientsPerDoctorRaw = patientsRes.data?.data || [];
+      const patientsPerDoctor = patientsPerDoctorRaw.map((item) => ({
+  doctor: item.doctor || "Unknown",
+  patients: item.patients,
+}));
+
 
       setUserStats({
         totalUsers,
@@ -63,8 +76,6 @@ const GestionGlobale = () => {
   return (
     <div>
       <Title level={2}>Admin Global Dashboard</Title>
-
-      {/* Top Stats */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card>
@@ -88,26 +99,26 @@ const GestionGlobale = () => {
         </Col>
       </Row>
 
-      {/* Tabs */}
       <Tabs defaultActiveKey="overview" type="card">
-        {/* Overview Tab */}
         <TabPane tab="Overview" key="overview">
           <Row gutter={24}>
-            {/* Patients per Doctor */}
             <Col span={12}>
               <Card title="Patients per Doctor" style={{ height: "100%" }}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={userStats.patientsPerDoctor}>
-                    <XAxis dataKey="doctor" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="patients" fill="#1890ff" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {userStats.patientsPerDoctor.length === 0 ? (
+                  <p>No patient data available</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={userStats.patientsPerDoctor}>
+                      <XAxis dataKey="doctor" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="patients" fill="#1890ff" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </Card>
             </Col>
 
-            {/* User Roles */}
             <Col span={12}>
               <Card title="User Roles Distribution" style={{ height: "100%" }}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -134,10 +145,8 @@ const GestionGlobale = () => {
           </Row>
         </TabPane>
 
-        {/* Analytics Tab */}
         <TabPane tab="Analytics" key="analytics">
           <Row gutter={24}>
-            {/* Department Distribution */}
             <Col span={12}>
               <Card title="Department Distribution" style={{ height: "100%" }}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -150,8 +159,6 @@ const GestionGlobale = () => {
                 </ResponsiveContainer>
               </Card>
             </Col>
-
-            {/* Example: Active vs Inactive Users */}
             <Col span={12}>
               <Card title="Active vs Inactive Users" style={{ height: "100%" }}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -180,7 +187,6 @@ const GestionGlobale = () => {
           </Row>
         </TabPane>
 
-        {/* Reports Tab */}
         <TabPane tab="Reports" key="reports">
           <Title level={4}>Available Reports</Title>
           <Divider />

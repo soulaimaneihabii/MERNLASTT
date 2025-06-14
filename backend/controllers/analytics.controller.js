@@ -504,36 +504,46 @@ export const getSystemHealth = asyncHandler(async (req, res) => {
   })
 })
 export const getPatientsPerDoctor = asyncHandler(async (req, res) => {
-    const patientsPerDoctor = await Patient.aggregate([
-        { $match: { doctor: { $ne: null } } },
-        {
-            $group: {
-                _id: "$doctor",
-                count: { $sum: 1 },
-            },
+  const patientsPerDoctor = await Patient.aggregate([
+    { $match: { doctor: { $ne: null } } },
+    {
+      $group: {
+        _id: "$doctor",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "doctorInfo",
+      },
+    },
+    { $unwind: "$doctorInfo" },
+    {
+      $project: {
+        doctor: {
+          $cond: {
+            if: { $ne: ["$doctorInfo.name", null] },
+            then: "$doctorInfo.name",
+            else: "Unknown"
+          }
         },
-        {
-            $lookup: {
-                from: "users",
-                localField: "_id",
-                foreignField: "_id",
-                as: "doctorInfo",
-            },
-        },
-        { $unwind: "$doctorInfo" },
-        {
-            $project: {
-                doctor: "$doctorInfo.name",
-                patients: "$count",
-            },
-        },
-    ]);
+        patients: "$count",
+      },
+    },
+  ]);
 
-    res.status(200).json({
-        success: true,
-        data: patientsPerDoctor,
-    });
+  res.status(200).json({
+    success: true,
+    data: patientsPerDoctor,
+  });
 });
+
+
+
+
 export const fetchDoctorDashboardStatse = asyncHandler(async (req, res) => {
   const doctorId = new mongoose.Types.ObjectId(req.user._id);
 
