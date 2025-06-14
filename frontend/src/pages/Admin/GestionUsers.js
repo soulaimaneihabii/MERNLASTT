@@ -28,38 +28,65 @@ import {
   TeamOutlined,
   BugOutlined,
 } from "@ant-design/icons";
-import { fetchUsers, createUser, updateUser, deleteUser, clearError } from "../../store/slices/usersSlice";
-import { fetchPatients } from "../../store/slices/patientsSlice";
-import API from "../../services/api";
-import SystemInfo from "./SystemInfo";  // adjust path if needed
+import {
+  fetchUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  clearError,
+} from "../../store/slices/usersSlice";
+import { fetchPatients, fetchPatientById } from "../../store/slices/patientsSlice";
+import SystemInfo from "./SystemInfo";
 
 const { Title } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
+const cardStyle = {
+  borderRadius: "12px",
+  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+  padding: "20px",
+  marginBottom: "24px",
+};
+
+const titleStyle = {
+  fontWeight: 700,
+  fontSize: 22,
+  marginBottom: 24,
+};
+
+const tableStyle = {
+  borderRadius: "10px",
+  overflow: "hidden",
+  boxShadow: "0 0 10px rgba(0, 0, 0, 0.06)",
+  transition: "all 0.3s ease",
+};
+
 const GestionUsers = () => {
   const dispatch = useDispatch();
-  const { users = [], total = 0, loading, error, currentPage, pageSize } = useSelector((state) => state.users);
-  const { patients = [] } = useSelector((state) => state.patients);
+  const {
+    users = [],
+    total = 0,
+    loading,
+    error,
+    currentPage,
+    pageSize,
+  } = useSelector((state) => state.users);
+  const { patients = [], selectedPatient } = useSelector((state) => state.patients);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
   const [form] = Form.useForm();
 
-  // ✅ Fetch data
   useEffect(() => {
-    dispatch(fetchUsers({ page: currentPage, limit: pageSize, role: 'admin_or_doctor' }));
-
-    dispatch(fetchPatients({})); // Admin fetch all patients
+    dispatch(fetchUsers({ page: currentPage, limit: pageSize, role: "admin_or_doctor" }));
+    dispatch(fetchPatients({}));
   }, [dispatch, currentPage, pageSize]);
 
   useEffect(() => {
     if (error) {
-      notification.error({
-        message: "Error",
-        description: error,
-      });
+      notification.error({ message: "Error", description: error });
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -71,54 +98,55 @@ const GestionUsers = () => {
     form.resetFields();
   };
 
-  const handleEditUser = (user) => {
-    setEditingUser(user);
-    setSelectedRole(user.role);
-    setIsModalVisible(true);
-    form.setFieldsValue(user);
-  };
+  const handleEditUser = async (user) => {
+  setEditingUser(user);
+  setIsModalVisible(true);
 
-  const handleDeleteUser = async (userId) => {
   try {
-    await dispatch(deleteUser(userId)).unwrap();
-    notification.success({
-      message: "Success",
-      description: "User deleted successfully",
+    const res = await dispatch(fetchPatientById(user._id)).unwrap();
+
+    const fullName = `${res.firstName || ""} ${res.lastName || ""}`;
+    const email = user?.email || res?.email || "";
+    const status = user?.isActive ?? true;
+
+    form.setFieldsValue({
+      fullName,
+      email,
+      password: "", // always blank for security
+      isActive: status,
     });
-  } catch (error) {
+  } catch (e) {
     notification.error({
       message: "Error",
-      description: error.message || "Failed to delete user",
+      description: "Failed to load patient info",
     });
   }
 };
 
 
+  const handleDeleteUser = async (userId) => {
+    try {
+      await dispatch(deleteUser(userId)).unwrap();
+      notification.success({ message: "Success", description: "User deleted successfully" });
+    } catch (error) {
+      notification.error({ message: "Error", description: error.message || "Failed to delete user" });
+    }
+  };
+
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-
       if (editingUser) {
         await dispatch(updateUser({ id: editingUser.id, userData: values })).unwrap();
-        notification.success({
-          message: "Success",
-          description: "User updated successfully",
-        });
+        notification.success({ message: "Success", description: "User updated successfully" });
       } else {
         await dispatch(createUser(values)).unwrap();
-        notification.success({
-          message: "Success",
-          description: "User created successfully",
-        });
+        notification.success({ message: "Success", description: "User created successfully" });
       }
-
       setIsModalVisible(false);
       form.resetFields();
     } catch (error) {
-      notification.error({
-        message: "Error",
-        description: error.message || "Operation failed",
-      });
+      notification.error({ message: "Error", description: error.message || "Operation failed" });
     }
   };
 
@@ -131,7 +159,6 @@ const GestionUsers = () => {
     setSelectedRole(value);
   };
 
-  // ✅ User columns
   const userColumns = [
     {
       title: "Name",
@@ -147,46 +174,28 @@ const GestionUsers = () => {
       title: "Role",
       dataIndex: "role",
       key: "role",
-      render: (role) => (
-        <Tag color={role === "admin" ? "red" : role === "doctor" ? "blue" : "green"}>{role?.toUpperCase()}</Tag>
-      ),
+      render: (role) => <Tag color={role === "admin" ? "red" : role === "doctor" ? "blue" : "green"}>{role?.toUpperCase()}</Tag>,
     },
-   {
-  title: "Status",
-  dataIndex: "isActive",
-  key: "isActive",
-  render: (isActive) => (
-    <Tag color={isActive ? "green" : "red"}>
-      {isActive ? "ACTIVE" : "INACTIVE"}
-    </Tag>
-  ),
-
-
+    {
+      title: "Status",
+      dataIndex: "isActive",
+      key: "isActive",
+      render: (isActive) => <Tag color={isActive ? "green" : "red"}>{isActive ? "ACTIVE" : "INACTIVE"}</Tag>,
     },
     {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
         <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditUser(record)}>
-            Edit
-          </Button>
-          <Popconfirm
-            title="Are you sure you want to delete this user?"
-            onConfirm={() => handleDeleteUser(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              Delete
-            </Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditUser(record)}>Edit</Button>
+          <Popconfirm title="Are you sure you want to delete this user?" onConfirm={() => handleDeleteUser(record.id)} okText="Yes" cancelText="No">
+            <Button type="link" danger icon={<DeleteOutlined />}>Delete</Button>
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  // ✅ Patient columns with correct Doctor column
   const patientColumns = [
     {
       title: "Patient Name",
@@ -200,9 +209,11 @@ const GestionUsers = () => {
     },
     {
       title: "Doctor",
-      dataIndex: "doctor",
       key: "doctor",
-      render: (doctor) => (doctor ? doctor.name : "Unassigned"),
+      render: (_, record) => {
+        const doctor = users.find((u) => u._id?.toString() === record.doctor?._id?.toString() || u._id?.toString() === record.doctor?.toString());
+        return doctor ? doctor.name : "Unassigned";
+      },
     },
     {
       title: "Age",
@@ -210,113 +221,92 @@ const GestionUsers = () => {
       key: "age",
     },
     {
-      title: "Gender",
-      dataIndex: "gender",
-      key: "gender",
-      render: (gender) => <Tag color={gender === "male" ? "blue" : "pink"}>{gender?.toUpperCase()}</Tag>,
-    },
-    {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (status) => (
-        <Tag color={status === "active" ? "green" : "orange"}>{status?.toUpperCase()}</Tag>
+      render: (status) => <Tag color={status === "active" ? "green" : "orange"}>{status?.toUpperCase()}</Tag>,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space size="middle">
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditUser(record)}>Edit</Button>
+          <Popconfirm title="Are you sure you want to delete this user?" onConfirm={() => handleDeleteUser(record.id)} okText="Yes" cancelText="No">
+            <Button type="link" danger icon={<DeleteOutlined />}>Delete</Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
 
-  const doctorCount = Array.isArray(users) ? users.filter((u) => u?.role === "doctor").length : 0;
-  const adminCount = Array.isArray(users) ? users.filter((u) => u?.role === "admin").length : 0;
-  const patientCount = Array.isArray(patients) ? patients.length : 0;
+  const doctorCount = users.filter((u) => u?.role === "doctor").length;
+  const adminCount = users.filter((u) => u?.role === "admin").length;
+  const patientCount = patients.length;
 
   return (
-    <div>
-      <Title level={2}>Admin Dashboard - System Management</Title>
-
-      <Tabs defaultActiveKey="users">
-        {/* Users tab */}
+    <div style={{ padding: "24px" }}>
+      <Title style={titleStyle}>Admin Dashboard - System Management</Title>
+      <Tabs defaultActiveKey="users" type="card">
         <TabPane tab="User Management" key="users" icon={<UserOutlined />}>
-          <Row gutter={16} style={{ marginBottom: 24 }}>
-            <Col span={8}>
-              <Card>
-                <Statistic title="Total Users" value={total} prefix={<UserOutlined />} />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic title="Doctors" value={doctorCount} prefix={<TeamOutlined />} valueStyle={{ color: "#1890ff" }} />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic title="Admins" value={adminCount} prefix={<TeamOutlined />} valueStyle={{ color: "#cf1322" }} />
-              </Card>
-            </Col>
+          <Row gutter={[16, 16]}>
+            <Col span={8}><Card style={{ ...cardStyle, backgroundColor: "#e3f2fd" }}><Statistic title="Total Users" value={total} prefix={<UserOutlined />} /></Card></Col>
+            <Col span={8}><Card style={{ ...cardStyle, backgroundColor: "#e6f7ff" }}><Statistic title="Doctors" value={doctorCount} prefix={<TeamOutlined />} valueStyle={{ color: "#1890ff" }} /></Card></Col>
+            <Col span={8}><Card style={{ ...cardStyle, backgroundColor: "#fff1f0" }}><Statistic title="Admins" value={adminCount} prefix={<TeamOutlined />} valueStyle={{ color: "#cf1322" }} /></Card></Col>
           </Row>
 
-          <Card>
-            <div style={{ marginBottom: 16 }}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser}>
-                Add Doctor/Admin
-              </Button>
+          <Card style={cardStyle} title="Manage Admins & Doctors">
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser} style={{ marginBottom: 16 }}>Add Doctor/Admin</Button>
+            <div style={tableStyle}>
+              <Table
+                columns={userColumns}
+                dataSource={users.filter((u) => u.role === "admin" || u.role === "doctor")}
+                rowKey="id"
+                loading={loading}
+                pagination={{
+                  current: currentPage,
+                  pageSize,
+                  total,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+                }}
+              />
             </div>
-
-          <Table
-  columns={userColumns}
-  dataSource={users.filter((u) => u.role === "admin" || u.role === "doctor")}
-  rowKey="id"
-  loading={loading}
-  pagination={{
-    current: currentPage,
-    pageSize,
-    total,
-    showSizeChanger: true,
-    showQuickJumper: true,
-    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-  }}
-/>
-
           </Card>
         </TabPane>
 
-        {/* Patients tab */}
         <TabPane tab="Patients Overview" key="patients" icon={<TeamOutlined />}>
-          <Row gutter={16} style={{ marginBottom: 24 }}>
-            <Col span={24}>
-              <Card>
-                <Statistic title="Total Patients" value={patientCount} prefix={<TeamOutlined />} />
-              </Card>
-            </Col>
+          <Row gutter={[16, 16]}>
+            <Col span={24}><Card style={{ ...cardStyle, backgroundColor: "#e8f5e9" }}><Statistic title="Total Patients" value={patientCount} prefix={<TeamOutlined />} /></Card></Col>
           </Row>
-
-          <Card title="All Patients by Doctor">
-           <Table
-  columns={userColumns}
-  dataSource={users}    // No need to filter anymore!
-  rowKey="id"
-  loading={loading}
-  pagination={{
-    current: currentPage,
-    pageSize,
-    total,
-    showSizeChanger: true,
-    showQuickJumper: true,
-    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-  }}
-/>
-
+          <Card style={cardStyle} title="All Patients">
+            <div style={tableStyle}>
+              <Table
+                columns={patientColumns}
+                dataSource={patients}
+                rowKey="_id"
+                loading={loading}
+                pagination={{
+                  current: 1,
+                  pageSize: 10,
+                  total: patients.length,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+                }}
+              />
+            </div>
           </Card>
         </TabPane>
 
-        {/* System info tab */}
         <TabPane tab="System Information" key="system" icon={<BugOutlined />}>
           <SystemInfo />
         </TabPane>
       </Tabs>
 
-      {/* Modal */}
       <Modal
-        title={editingUser ? "Edit User" : "Create Doctor/Admin"}
+        title={editingUser ? "Edit Patient Info" : "Create Doctor/Admin"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
@@ -324,68 +314,14 @@ const GestionUsers = () => {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true, message: "Please input the name!" }]}>
-            <Input />
+          <Form.Item name="fullName" label="Full Name">
+            <Input disabled />
           </Form.Item>
-
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: "Please input the email!" },
-              { type: "email", message: "Please enter a valid email!" },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="role" label="Role" rules={[{ required: true, message: "Please select a role!" }]}>
-            <Select placeholder="Select a role" onChange={handleRoleChange}>
-              <Option value="admin">Super Admin</Option>
-              <Option value="doctor">Doctor</Option>
-            </Select>
-          </Form.Item>
-
-          {selectedRole === "doctor" && (
-            <>
-              <Form.Item
-                name="specialization"
-                label="Specialization"
-                rules={[{ required: true, message: "Please enter specialization!" }]}
-              >
-                <Input />
-              </Form.Item>
-
-              <Form.Item
-                name="licenseNumber"
-                label="License Number"
-                rules={[{ required: true, message: "Please enter license number!" }]}
-              >
-                <Input />
-              </Form.Item>
-            </>
-          )}
-
-          {!editingUser && (
-            <Form.Item
-              name="password"
-              label="Password"
-              rules={[
-                { required: true, message: "Please input the password!" },
-                { min: 6, message: "Password must be at least 6 characters!" },
-              ]}
-            >
-              <Input.Password />
-            </Form.Item>
-          )}
-
-          <Form.Item name="isActive" label="Status" rules={[{ required: true, message: "Please select a status!" }]}>
-  <Select placeholder="Select status">
-    <Option value={true}>Active</Option>
-    <Option value={false}>Inactive</Option>
-  </Select>
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+  <Input disabled />
 </Form.Item>
-
+          <Form.Item name="password" label="Password" rules={[{ min: 6 }]}> <Input.Password placeholder="Leave blank to keep current" /> </Form.Item>
+          <Form.Item name="isActive" label="Status" rules={[{ required: true }]}> <Select placeholder="Select status"> <Option value={true}>Active</Option> <Option value={false}>Inactive</Option> </Select> </Form.Item>
         </Form>
       </Modal>
     </div>
