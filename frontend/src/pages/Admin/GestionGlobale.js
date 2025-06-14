@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { Card, Typography, Row, Col, Tabs, Statistic, Divider, Button } from "antd";
 import { UserOutlined, TeamOutlined } from "@ant-design/icons";
@@ -19,7 +20,7 @@ import API from "../../services/api";
 const { Title } = Typography;
 const { TabPane } = Tabs;
 
-const COLORS = ["#1890ff", "#f5222d", "#52c41a", "#faad14", "#13c2c2"];
+const COLORS = ["#3f51b5", "#e91e63", "#4caf50", "#ff9800", "#00bcd4"];
 
 const GestionGlobale = () => {
   const [userStats, setUserStats] = useState({
@@ -44,10 +45,9 @@ const GestionGlobale = () => {
       const patientsRes = await API.get("/analytics/patients-per-doctor");
       const patientsPerDoctorRaw = patientsRes.data?.data || [];
       const patientsPerDoctor = patientsPerDoctorRaw.map((item) => ({
-  doctor: item.doctor || "Unknown",
-  patients: item.patients,
-}));
-
+        doctor: item.doctor || "Unknown",
+        patients: item.patients,
+      }));
 
       setUserStats({
         totalUsers,
@@ -73,37 +73,38 @@ const GestionGlobale = () => {
     fetchStats();
   }, []);
 
+  const statCards = [
+    { label: "Total Users", value: userStats.totalUsers, icon: <UserOutlined style={{ fontSize: 28 }} />, color: "#e3f2fd" },
+    { label: "Doctors", value: userStats.doctors, icon: <TeamOutlined style={{ fontSize: 28 }} />, color: "#fdecea" },
+    { label: "Admins", value: userStats.admins, icon: <TeamOutlined style={{ fontSize: 28 }} />, color: "#f3e5f5" },
+    { label: "Active Users", value: userStats.activeUsers, icon: <UserOutlined style={{ fontSize: 28 }} />, color: "#e8f5e9" },
+  ];
+
   return (
-    <div>
-      <Title level={2}>Admin Global Dashboard</Title>
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="Total Users" value={userStats.totalUsers} prefix={<UserOutlined />} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="Doctors" value={userStats.doctors} prefix={<TeamOutlined />} valueStyle={{ color: "#1890ff" }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="Admins" value={userStats.admins} prefix={<TeamOutlined />} valueStyle={{ color: "#cf1322" }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="Active Users" value={userStats.activeUsers} prefix={<UserOutlined />} valueStyle={{ color: "#52c41a" }} />
-          </Card>
-        </Col>
+    <div style={{ padding: 24 }}>
+      <Title level={2} style={{ fontWeight: 700, marginBottom: 24 }}>Admin Global Dashboard</Title>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        {statCards.map((item, i) => (
+          <Col xs={24} sm={12} md={6} key={i}>
+            <Card style={{ ...cardStyle, background: item.color }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={cardTitle}>{item.label}</div>
+                  <div style={cardNumber}>{item.value}</div>
+                </div>
+                <div>{item.icon}</div>
+              </div>
+            </Card>
+          </Col>
+        ))}
       </Row>
 
       <Tabs defaultActiveKey="overview" type="card">
         <TabPane tab="Overview" key="overview">
-          <Row gutter={24}>
-            <Col span={12}>
-              <Card title="Patients per Doctor" style={{ height: "100%" }}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Card title="Patients per Doctor">
                 {userStats.patientsPerDoctor.length === 0 ? (
                   <p>No patient data available</p>
                 ) : (
@@ -112,15 +113,15 @@ const GestionGlobale = () => {
                       <XAxis dataKey="doctor" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="patients" fill="#1890ff" />
+                      <Bar dataKey="patients" fill="#3f51b5" />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
               </Card>
             </Col>
 
-            <Col span={12}>
-              <Card title="User Roles Distribution" style={{ height: "100%" }}>
+            <Col xs={24} md={12}>
+              <Card title="User Roles Distribution">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -146,21 +147,22 @@ const GestionGlobale = () => {
         </TabPane>
 
         <TabPane tab="Analytics" key="analytics">
-          <Row gutter={24}>
+          <Row gutter={[16, 16]}>
             <Col span={12}>
-              <Card title="Department Distribution" style={{ height: "100%" }}>
+              <Card title="Department Distribution">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={userStats.departmentDistribution}>
                     <XAxis dataKey="department" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#52c41a" />
+                    <Bar dataKey="count" fill="#4caf50" />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
             </Col>
+
             <Col span={12}>
-              <Card title="Active vs Inactive Users" style={{ height: "100%" }}>
+              <Card title="Active vs Inactive Users">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -175,8 +177,8 @@ const GestionGlobale = () => {
                       outerRadius={100}
                       label
                     >
-                      <Cell fill="#1890ff" />
-                      <Cell fill="#f5222d" />
+                      <Cell fill="#4caf50" />
+                      <Cell fill="#e91e63" />
                     </Pie>
                     <Tooltip />
                     <Legend />
@@ -190,7 +192,7 @@ const GestionGlobale = () => {
         <TabPane tab="Reports" key="reports">
           <Title level={4}>Available Reports</Title>
           <Divider />
-          <Row gutter={24}>
+          <Row gutter={[16, 16]}>
             <Col span={8}>
               <Card title="Financial Reports">
                 <ul>
@@ -227,6 +229,27 @@ const GestionGlobale = () => {
       </Tabs>
     </div>
   );
+};
+
+const cardStyle = {
+  borderRadius: "12px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  padding: "20px",
+  transition: "transform 0.2s ease",
+  cursor: "pointer"
+};
+
+const cardTitle = {
+  fontSize: 16,
+  fontWeight: 600,
+  marginBottom: 4,
+  color: "#333"
+};
+
+const cardNumber = {
+  fontSize: 28,
+  fontWeight: 700,
+  color: "#111"
 };
 
 export default GestionGlobale;
