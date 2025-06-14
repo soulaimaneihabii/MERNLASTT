@@ -33,6 +33,7 @@ import {
   MedicineBoxOutlined,
   ExperimentOutlined,
   BarChartOutlined,
+  LeftCircleFilled,
 } from "@ant-design/icons"
 import { fetchPatients, updatePatient } from "../../store/slices/patientsSlice"
 import { getAISuggestions } from "../../services/aiAssistantService";
@@ -405,13 +406,17 @@ const exportDSEFile = () => {
     </Option>
   ))
   return (
+    
+
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>Enhanced Medical Information Management</Title>
-        <Text type="secondary">
-          Comprehensive patient medical data collection for AI-powered diabetes risk prediction.
-        </Text>
-      </div>
+    <div style={{ marginBottom: 24, textAlign: "left" }}>
+  <Title level={2} style={{ fontWeight: 700, color: "#1F2937", marginBottom: 4 }}>
+    Enhanced Medical Information
+  </Title>
+  <Text style={{ fontSize: 16, color: "#6B7280" }}>
+    AI-powered patient data collection system.
+  </Text>
+</div>
 
       <Row gutter={16}>
         <Col span={6}>
@@ -428,27 +433,33 @@ const exportDSEFile = () => {
                 <Option key={patient.id} value={patient.id}>
                   <div>
                     <div style={{ fontWeight: "bold" }}>{patient.firstName} {patient.lastName}</div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>{patient.email}</div>
+                  
                   </div>
                 </Option>
               ))}
             </Select>
 
-            {selectedPatient && (
-              <div style={{ marginTop: 16, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8 }}>
-                <Text strong>Selected Patient:</Text>
-                <br />
-                <Text>{selectedPatient.firstName} {selectedPatient.lastName}</Text>
-                <br />
-                <Text type="secondary">{selectedPatient.email}</Text>
-                <br />
-                <Text type="secondary">Age: {selectedPatient.age}</Text>
-                <br />
-                <Tag color={selectedPatient.status === "Active" ? "green" : "orange"}>
-                  {selectedPatient.status}
-                </Tag>
-              </div>
-            )}
+           {selectedPatient && (
+  <div style={{ marginTop: 16 }}>
+    <Card
+      bordered
+      style={{
+        backgroundColor: '#EFF6FF',
+        borderRadius: 12,
+        boxShadow: '0 4px 14px rgba(0,0,0,0.06)'
+      }}
+    >
+      <Title level={5} style={{ marginBottom: 4 }}>{selectedPatient.firstName} {selectedPatient.lastName}</Title>
+      <Text type="secondary">{selectedPatient.email}</Text>
+      <br />
+      <Tag color="blue" style={{ marginTop: 8 }}>Age: {selectedPatient.age}</Tag>
+      <Tag color={selectedPatient.status === "Active" ? "green" : "orange"}>
+        {selectedPatient.status}
+      </Tag>
+    </Card>
+  </div>
+)}
+
           </Card>
         </Col>
 
@@ -566,8 +577,15 @@ const exportDSEFile = () => {
                       </Col>
                       <Col span={8}>
                         <Form.Item name={["emergencyContact", "relationship"]} label="Relationship">
-                          <Input placeholder="Enter relationship" />
-                        </Form.Item>
+  <Select placeholder="Select relationship">
+    <Option value="Parent">Parent</Option>
+    <Option value="Sibling">Sibling</Option>
+    <Option value="Spouse">Spouse</Option>
+    <Option value="Friend">Friend</Option>
+    <Option value="Guardian">Guardian</Option>
+    <Option value="Other">Other</Option>
+  </Select>
+</Form.Item>
                       </Col>
                       <Col span={8}>
                         <Form.Item name={["emergencyContact", "phone"]} label="Contact Phone">
