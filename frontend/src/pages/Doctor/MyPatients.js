@@ -78,7 +78,7 @@ const MyPatients = () => {
     form.setFieldsValue({
       firstName: patient.firstName,
       lastName: patient.lastName,
-      birthDate: moment(patient.birthDate),
+   birthDate: moment(patient.dateOfBirth),
       gender: patient.gender,
       status: patient.status
     })
@@ -143,10 +143,11 @@ const MyPatients = () => {
       render: (r) => <Button type="link" onClick={() => handleEdit(r)}>{`${r.firstName} ${r.lastName}`}</Button>
     },
     {
-      title: 'Age', key: 'age',
-      sorter: (a, b) => moment().diff(a.birthDate, 'years') - moment().diff(b.birthDate, 'years'),
-      render: (r) => moment().diff(r.birthDate, 'years')
-    },
+  title: 'Age', key: 'age',
+  sorter: (a, b) => moment().diff(a.dateOfBirth, 'years') - moment().diff(b.dateOfBirth, 'years'),
+  render: (r) => r.dateOfBirth ? moment().diff(r.dateOfBirth, 'years') : 'N/A'
+},
+
     {
       title: 'Gender',
       dataIndex: 'gender',
