@@ -20,7 +20,7 @@ import {
   Input,
   DatePicker,
   Tabs,
-  Badge,
+  Badge,Tooltip
 } from "antd"
 import {
   UploadOutlined,
@@ -249,46 +249,46 @@ const [aiLoading, setAiLoading] = useState(false);
     });
   }
 };
-const exportDSEFile = () => {
-  if (!selectedPatient) {
-    notification.warning({
-      message: "No Patient Selected",
-      description: "Please select a patient first.",
-    });
-    return;
-  }
+// const exportDSEFile = () => {
+//   if (!selectedPatient) {
+//     notification.warning({
+//       message: "No Patient Selected",
+//       description: "Please select a patient first.",
+//     });
+//     return;
+//   }
 
-  const dseData = {
-    patientId: selectedPatient.id,
-    firstName: selectedPatient.firstName,
-    lastName: selectedPatient.lastName,
-    medicalFiles: medicalFiles.map((file) => ({
-      name: file.name,
-      ocrText: file.ocrText,
-      uploadDate: file.uploadDate,
-    })),
-    exportedAt: new Date().toISOString(),
-  };
+  // const dseData = {
+  //   patientId: selectedPatient.id,
+  //   firstName: selectedPatient.firstName,
+  //   lastName: selectedPatient.lastName,
+  //   medicalFiles: medicalFiles.map((file) => ({
+  //     name: file.name,
+  //     ocrText: file.ocrText,
+  //     uploadDate: file.uploadDate,
+  //   })),
+  //   exportedAt: new Date().toISOString(),
+  // };
 
-  const jsonStr = JSON.stringify(dseData, null, 2);
+//   const jsonStr = JSON.stringify(dseData, null, 2);
 
-  const blob = new Blob([jsonStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+//   const blob = new Blob([jsonStr], { type: "application/json" });
+//   const url = URL.createObjectURL(blob);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `Patient_${selectedPatient.id}_DSE.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+//   const link = document.createElement("a");
+//   link.href = url;
+//   link.download = `Patient_${selectedPatient.id}_DSE.json`;
+//   document.body.appendChild(link);
+//   link.click();
+//   document.body.removeChild(link);
 
-  URL.revokeObjectURL(url);
+//   URL.revokeObjectURL(url);
 
-  notification.success({
-    message: "DSE Exported",
-    description: "Patient DSE file was exported successfully.",
-  });
-};
+//   notification.success({
+//     message: "DSE Exported",
+//     description: "Patient DSE file was exported successfully.",
+//   });
+// };
  const handleFileUpload = async ({ fileList: newFileList }) => {
   setFileList(newFileList);
 
@@ -477,12 +477,35 @@ const exportDSEFile = () => {
           {selectedPatient ? (
             <Card
               title="Comprehensive Medical Information"
-              extra={
-                <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveMedicalInfo} loading={loading}>
-                  Save Medical Information
-                </Button>
-                
-              }
+            extra={
+  <Space>
+    <Button
+      type="primary"
+      icon={<SaveOutlined />}
+      onClick={handleSaveMedicalInfo}
+      loading={loading}
+    >
+      Save Medical Information
+    </Button>
+    <Tooltip
+      title="Let AI suggest basic medical information to save time."
+      color="#2db7f5"
+      placement="bottom"
+    >
+      <Button
+        type="dashed"
+        icon={<ExperimentOutlined />}
+        onClick={handleAISuggestions}
+        loading={aiLoading}
+        style={{ borderColor: "#91d5ff", color: "#1890ff" }}
+      >
+        Smart Auto-Fill
+      </Button>
+    </Tooltip>
+  </Space>
+}
+
+
               
             >
               <Tabs activeKey={activeTab} onChange={setActiveTab}>
@@ -785,7 +808,7 @@ const exportDSEFile = () => {
 
   <Divider />
 
-  <Button
+  {/* <Button
   type="default"
   size="large"
   icon={<FileTextOutlined />}
@@ -794,16 +817,8 @@ const exportDSEFile = () => {
   block
 >
   Export to DSE
-</Button>
-<Button
-  type="default"
-  icon={<ExperimentOutlined />}
-  onClick={handleAISuggestions}
-  loading={aiLoading}
-  style={{ marginLeft: 12 }}
->
-  Smart Auto-Fill
-</Button>
+</Button> */}
+
  
 </TabPane>
 
