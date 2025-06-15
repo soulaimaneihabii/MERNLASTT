@@ -1,19 +1,19 @@
-// services/aiAssistantService.js
-
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5001"; // Flask backend
-
-export const getAISuggestions = async (patientId) => {
-  console.log("Calling real AI backend for patient:", patientId);
-
-  const response = await axios.post(`${API_BASE_URL}/api/ai/assist`, {
-    patient_id: patientId,
-  });
+export const getAISuggestions = async (patientId, token) => {
+  const response = await axios.post(
+    "http://localhost:3001/api/ai/suggest", // ← NodeJS endpoint
+    { patientId },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`, // If needed
+      },
+    }
+  );
 
   if (response.data?.success) {
-    return response.data.data;
+    return response.data;
   } else {
-    throw new Error("AI suggestion failed");
+    throw new Error(response.data?.error || "AI suggestion failed");
   }
 };

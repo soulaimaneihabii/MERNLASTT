@@ -47,6 +47,7 @@ const { Option } = Select
 const { TextArea } = Input
 const { TabPane } = Tabs
 
+
 const MedicalInformation = () => {
   const dispatch = useDispatch()
   const { patients = [], loading } = useSelector((state) => state.patients)
@@ -62,51 +63,58 @@ const MedicalInformation = () => {
   const [newAllergy, setNewAllergy] = useState("")
   const [activeTab, setActiveTab] = useState("basic")
 const [aiLoading, setAiLoading] = useState(false);
+
+
   useEffect(() => {
     if (user?.id) {
       dispatch(fetchPatients({ doctorId: user.id }))
     }
   }, [dispatch, user?.id])
   //ai assisstance
-const handleAISuggestions = async () => {
-  if (!selectedPatient) {
+  const { token } = useSelector((state) => state.auth);
+
+  const handleAISuggestions = async () => {
+  if (!selectedPatient || !selectedPatient.id) {
     notification.warning({
       message: "No Patient Selected",
-      description: "Please select a patient first.",
+      description: "Please select a patient that has a linked user account.",
     });
     return;
   }
 
   try {
     setAiLoading(true);
+    const { suggestedFields } = await getAISuggestions(selectedPatient.id, token);
 
-    const aiResponse = await getAISuggestions(selectedPatient.id);
+    if (suggestedFields) {
+      // ✅ Convert dateOfBirth to dayjs object if present
+      if (suggestedFields.dateOfBirth) {
+        suggestedFields.dateOfBirth = dayjs(suggestedFields.dateOfBirth);
+      }
 
-    // ✅ aiResponse should include { patient_id, suggestedFields }
-    const suggested = aiResponse?.suggestedFields;
-    if (suggested && Object.keys(suggested).length > 0) {
-      form.setFieldsValue(suggested); // ✅ Autofill form values
+      form.setFieldsValue(suggestedFields);
 
       notification.success({
         message: "AI Suggestions Applied",
-        description: "Fields were auto-filled from AI.",
+        description: "Form fields were auto-filled using AI.",
       });
     } else {
       notification.warning({
-        message: "No AI Suggestions",
-        description: "AI did not return any fields.",
+        message: "No Suggestions",
+        description: "AI returned no suggested values.",
       });
     }
   } catch (error) {
-    console.error("AI suggestion error:", error);
+    console.error("AI suggestion error:", error.message);
     notification.error({
       message: "AI Suggestion Failed",
-      description: error.message || "Unable to fetch suggestions.",
+      description: error.message || "Unable to fetch AI suggestions.",
     });
   } finally {
     setAiLoading(false);
   }
 };
+
 
   const handlePatientSelect = (patientId) => {
     const patient = patients.find((p) => p.id === patientId)
