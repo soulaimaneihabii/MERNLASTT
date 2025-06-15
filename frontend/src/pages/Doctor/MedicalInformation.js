@@ -177,11 +177,14 @@ const [aiLoading, setAiLoading] = useState(false);
   }
 
   const handleDateOfBirthChange = (date) => {
-    if (date) {
-      const age = calculateAge(date)
-      form.setFieldsValue({ age })
-    }
+  if (date && dayjs(date).isValid()) {
+    const age = calculateAge(date);
+    form.setFieldsValue({ age });
+  } else {
+    form.setFieldsValue({ age: undefined });
   }
+};
+
 
   const handleSaveMedicalInfo = async () => {
   try {
@@ -541,12 +544,11 @@ const [aiLoading, setAiLoading] = useState(false);
                         </Form.Item>
                       </Col>
                       <Col span={8}>
-                        <Form.Item name="age" label="Age" rules={[{ required: true }]}>
-                          <Select placeholder="Select age" showSearch>
-                            {ageOptions}
-                          </Select>
-                        </Form.Item>
-                      </Col>
+  <Form.Item name="age" label="Age">
+    <Input placeholder="Auto-calculated" readOnly />
+  </Form.Item>
+</Col>
+
                       <Col span={8}>
                         <Form.Item name="gender" label="Gender" rules={[{ required: true }]}>
                           <Select placeholder="Select gender">
