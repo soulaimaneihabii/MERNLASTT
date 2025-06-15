@@ -71,32 +71,13 @@ export const getPatients = asyncHandler(async (req, res) => {
       };
     }
 
-  function calculateAge(dateOfBirth) {
-  if (!dateOfBirth) return 0;
-  const dob = new Date(dateOfBirth);
-  const today = new Date();
-  let age = today.getFullYear() - dob.getFullYear();
-  const m = today.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-const enrichedPatients = patients.map((p) => {
-  const plain = p.toObject();
-  plain.age = calculateAge(plain.dateOfBirth);
-  return plain;
-});
-
-res.status(200).json({
-  success: true,
-  count: enrichedPatients.length,
-  total,
-  pagination,
-  data: enrichedPatients,
-});
-
+    res.status(200).json({
+      success: true,
+      count: patients.length,
+      total,
+      pagination,
+      data: patients,
+    });
   } catch (error) {
     console.error("Error fetching patients:", error);
     res.status(500).json({

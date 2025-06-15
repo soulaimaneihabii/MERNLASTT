@@ -10,10 +10,9 @@ const PatientDSEExport = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch patient data
     const fetchPatientData = async () => {
       try {
-        const response = await axios.get("/api/patients/me"); // <- you need this API endpoint
+        const response = await axios.get("/api/patients/me");
         setPatientData(response.data);
       } catch (error) {
         console.error("Failed to fetch patient data", error);
@@ -33,40 +32,46 @@ const PatientDSEExport = () => {
     }
 
     const dseData = {
-      patientId: patientData.id,
-      firstName: patientData.firstName,
-      lastName: patientData.lastName,
+      patientId: patientData._id,
+      name: patientData.fullName,
+      email: patientData.email,
+      age: patientData.age,
+      gender: patientData.gender,
+      medications: patientData.currentMedications || [],
+      labTests: patientData.num_lab_procedures,
+      hospitalizations: patientData.number_inpatient,
+      emergencies: patientData.number_emergency,
       medicalFiles: patientData.medicalFiles?.map((file) => ({
         name: file.name,
-        ocrText: file.ocrText,
+        url: file.url,
         uploadDate: file.uploadDate,
-      })),
-      exportedAt: new Date().toISOString(),
+        type: file.type,
+        size: file.size,
+      })) || [],
+      exportDate: new Date().toISOString(),
     };
 
-    const jsonStr = JSON.stringify(dseData, null, 2);
-
-    const blob = new Blob([jsonStr], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(dseData, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Patient_${patientData.id}_DSE.json`;
+    link.download = `DSE_${patientData.fullName || "patient"}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     URL.revokeObjectURL(url);
 
     notification.success({
-      message: "DSE Exported",
-      description: "Your DSE file has been exported successfully.",
+      message: "Export Successful",
+      description: "Your DSE file has been downloaded.",
     });
   };
 
   return (
     <div style={{ padding: 24 }}>
-      <h1>My DSE File</h1>
+      <h1>📄 Export My DSE File</h1>
       <Button
         type="primary"
         icon={<FileTextOutlined />}

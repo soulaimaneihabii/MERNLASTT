@@ -82,10 +82,10 @@ const handleAISuggestions = async () => {
 
     const aiResponse = await getAISuggestions(selectedPatient.id);
 
-    if (aiResponse?.suggestedFields) {
-      form.setFieldsValue({
-        ...aiResponse.suggestedFields,
-      });
+    // ✅ aiResponse should include { patient_id, suggestedFields }
+    const suggested = aiResponse?.suggestedFields;
+    if (suggested && Object.keys(suggested).length > 0) {
+      form.setFieldsValue(suggested); // ✅ Autofill form values
 
       notification.success({
         message: "AI Suggestions Applied",
@@ -94,19 +94,20 @@ const handleAISuggestions = async () => {
     } else {
       notification.warning({
         message: "No AI Suggestions",
-        description: "AI returned no suggestions.",
+        description: "AI did not return any fields.",
       });
     }
   } catch (error) {
     console.error("AI suggestion error:", error);
     notification.error({
       message: "AI Suggestion Failed",
-      description: error.message || "Failed to fetch AI suggestions.",
+      description: error.message || "Unable to fetch suggestions.",
     });
   } finally {
     setAiLoading(false);
   }
 };
+
   const handlePatientSelect = (patientId) => {
     const patient = patients.find((p) => p.id === patientId)
     setSelectedPatient(patient)
