@@ -73,7 +73,7 @@ const [aiLoading, setAiLoading] = useState(false);
   //ai assisstance
   const { token } = useSelector((state) => state.auth);
 
-  const handleAISuggestions = async () => {
+ const handleAISuggestions = async () => {
   if (!selectedPatient || !selectedPatient.id) {
     notification.warning({
       message: "No Patient Selected",
@@ -87,7 +87,7 @@ const [aiLoading, setAiLoading] = useState(false);
     const { suggestedFields } = await getAISuggestions(selectedPatient.id, token);
 
     if (suggestedFields) {
-      // ✅ Convert dateOfBirth to dayjs object if present
+      // ✅ Convert any date fields
       if (suggestedFields.dateOfBirth) {
         suggestedFields.dateOfBirth = dayjs(suggestedFields.dateOfBirth);
       }
@@ -96,7 +96,7 @@ const [aiLoading, setAiLoading] = useState(false);
 
       notification.success({
         message: "AI Suggestions Applied",
-        description: "Form fields were auto-filled using AI.",
+        description: "Form fields auto-filled using AI predictions.",
       });
     } else {
       notification.warning({
@@ -114,6 +114,7 @@ const [aiLoading, setAiLoading] = useState(false);
     setAiLoading(false);
   }
 };
+
 
 
   const handlePatientSelect = (patientId) => {

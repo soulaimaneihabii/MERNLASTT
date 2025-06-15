@@ -146,69 +146,47 @@ def ai_assist():
     data = request.json
     print("🧠 Incoming Flask AI assist request:", data)
 
-    user_id = data.get("user_id")
+    user_id = data.get('user_id')
     if not user_id:
-        print("❌ Missing user_id")
         return jsonify({"success": False, "error": "Missing user_id"}), 400
 
     try:
         object_user_id = ObjectId(user_id)
     except Exception as e:
-        print("❌ Invalid user_id format:", e)
         return jsonify({"success": False, "error": f"Invalid user_id: {e}"}), 400
 
-    try:
-        patient = patients.find_one({"user": object_user_id})
-    except Exception as e:
-        print("❌ Error querying MongoDB:", e)
-        return jsonify({"success": False, "error": str(e)}), 500
-
+    patient = patients.find_one({"user": object_user_id})
     if not patient:
-        print("❌ Patient not found for user_id:", object_user_id)
         return jsonify({"success": False, "error": "Patient not found"}), 404
 
-    print("✅ Found patient:", patient.get("firstName", "[Unnamed]"))
+    # Base data
+    age = int(patient.get("age", 35))
+    gender = patient.get("gender", "Male")
+    race = patient.get("race", "White")
 
-    # Simulate a delay for AI thinking
-    time.sleep(1)
-
-    # Extract fields
+    # Simulate AI suggestions
     suggested_fields = {
-        "firstName": patient.get("firstName", ""),
-        "lastName": patient.get("lastName", ""),
-        "email": patient.get("email", ""),
-        "phone": patient.get("phone", ""),
-        "dateOfBirth": patient.get("dateOfBirth", ""),
-        "age": patient.get("age", 0),
-        "gender": patient.get("gender", ""),
-        "race": patient.get("race", ""),
-        "diag_1": patient.get("diag_1", ""),
-        "diag_2": patient.get("diag_2", ""),
-        "diag_3": patient.get("diag_3", ""),
-        "max_glu_serum": patient.get("max_glu_serum", ""),
-        "A1Cresult": patient.get("A1Cresult", ""),
-        "insulin": patient.get("insulin", ""),
-        "metformin": patient.get("metformin", ""),
-        "diabetesMed": patient.get("diabetesMed", ""),
-        "time_in_hospital": patient.get("time_in_hospital", 0),
-        "num_lab_procedures": patient.get("num_lab_procedures", 0),
-        "num_procedures": patient.get("num_procedures", 0),
-        "num_medications": patient.get("num_medications", 0),
-        "number_outpatient": patient.get("number_outpatient", 0),
-        "number_emergency": patient.get("number_emergency", 0),
-        "number_inpatient": patient.get("number_inpatient", 0),
-        "number_diagnoses": patient.get("number_diagnoses", 0),
-        "notes": patient.get("notes", ""),
-        # Address
-        "street": patient.get("address", {}).get("street", ""),
-        "city": patient.get("address", {}).get("city", ""),
-        "state": patient.get("address", {}).get("state", ""),
-        "zipCode": patient.get("address", {}).get("zipCode", ""),
-        # Emergency contact
-        "emergencyName": patient.get("emergencyContact", {}).get("name", ""),
-        "emergencyRelationship": patient.get("emergencyContact", {}).get("relationship", ""),
-        "emergencyPhone": patient.get("emergencyContact", {}).get("phone", "")
+        "age": age,
+        "diag_1": "E11.9" if age > 50 else "E10.9",
+        "diag_2": "I10" if gender == "Male" else "N18.9",
+        "diag_3": "J44.9" if race == "African American" else "None",
+        "max_glu_serum": ">200" if age > 60 else "Norm",
+        "A1Cresult": ">7" if age > 60 else "Norm",
+        "insulin": "Up" if gender == "Male" else "Steady",
+        "metformin": "Up",
+        "diabetesMed": "Yes" if age > 50 else "No",
+        "time_in_hospital": 5,
+        "num_lab_procedures": 50,
+        "num_procedures": 2,
+        "num_medications": 12,
+        "number_outpatient": 1,
+        "number_emergency": 0,
+        "number_inpatient": 1,
+        "number_diagnoses": 6,
     }
+
+    # Optional: log for debug
+    print("🧠 Suggested fields:", suggested_fields)
 
     return jsonify({
         "success": True,
