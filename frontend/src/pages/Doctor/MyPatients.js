@@ -196,7 +196,7 @@ const MyPatients = () => {
           <Tooltip title="View"><Button icon={<EyeOutlined />} onClick={() => navigate(`/doctor/patients/${r._id}`)} type="text" /></Tooltip>
           <Tooltip title="Medical Info"><Button icon={<InfoCircleOutlined />} onClick={() => navigate('/doctor/medical-info')} type="text" /></Tooltip>
           <Tooltip title="Edit"><Button icon={<EditOutlined />} onClick={() => handleEdit(r)} type="text" /></Tooltip>
-          <Tooltip title="Delete"><Button icon={<DeleteOutlined />} danger onClick={() => handleDelete(r._id)} type="text" /></Tooltip>
+          {/* <Tooltip title="Delete"><Button icon={<DeleteOutlined />} danger onClick={() => handleDelete(r._id)} type="text" /></Tooltip> */}
           <Tooltip title="Predict"><Button icon={<RocketOutlined />} onClick={() => navigate(`/doctor/predictions?patient=${r._id}`)} type="text" /></Tooltip>
         </Space>
       )
