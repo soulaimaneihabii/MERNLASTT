@@ -23,8 +23,15 @@ import {
   fetchPredictions,
   fetchPredictionStats,
 } from "../../store/slices/predictionsSlice";
-import { Pie } from "@ant-design/plots";
 
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -192,10 +199,53 @@ const Predictions = () => {
     },
   ];
 
-  const riskDistributionData = stats?.riskDistribution?.map((item) => ({
-    type: item._id === "high" ? "High" : item._id === "medium" ? "Moderate" : "Low",
-    value: item.count,
-  })) || [];
+const riskDistributionData = [
+  { type: "High", value: stats?.riskDistribution?.find(r => r._id === "high")?.count ?? 0 },
+  { type: "Moderate", value: stats?.riskDistribution?.find(r => r._id === "medium")?.count ?? 0 },
+  { type: "Low", value: stats?.riskDistribution?.find(r => r._id === "low")?.count ?? 0 },
+];
+
+const COLORS = ["#f5222d", "#ffc107", "#00b96b"]; // High, Moderate, Low
+
+const total = riskDistributionData.reduce((sum, item) => sum + item.value, 0);
+
+const formattedData = riskDistributionData.map((item) => ({
+  name: item.type,
+  value: item.value,
+  percent: total > 0 ? ((item.value / total) * 100).toFixed(1) : "0",
+}));
+
+const renderCustomizedLabel = ({
+  cx,
+  cy,
+  midAngle,
+  outerRadius,
+  percent,
+  index,
+}) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius + 20; // move outside
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#000" // black text
+      textAnchor={x > cx ? "start" : "end"}
+      dominantBaseline="central"
+      fontSize={14}
+    >
+      {`${formattedData[index].name}: ${formattedData[index].percent}%`}
+    </text>
+  );
+};
+
+
+console.log("✅ riskDistribution", stats?.riskDistribution);
+console.log("✅ Pie Chart Data", riskDistributionData);
+
 
   return (
     <div>
@@ -253,35 +303,31 @@ const Predictions = () => {
             </Space>
           </Card>
         </Col>
+<Col xs={24} md={12}>
+  <Card title="Risk Distribution">
+   <ResponsiveContainer width="100%" height={300}>
+  <PieChart>
+    <Pie
+      data={formattedData}
+      cx="50%"
+      cy="50%"
+      labelLine={false}
+      label={renderCustomizedLabel}
+      outerRadius={100}
+      innerRadius={60}
+      dataKey="value"
+    >
+      {formattedData.map((_, index) => (
+        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+      ))}
+    </Pie>
+    <Tooltip formatter={(value) => `${value} predictions`} />
+    <Legend verticalAlign="bottom" />
+  </PieChart>
+</ResponsiveContainer>
 
-        <Col xs={24} md={12}>
-          <Card title="Risk Distribution">
-            {riskDistributionData.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 40 }}>
-                <Text type="secondary">No predictions yet</Text>
-              </div>
-            ) : (
-              <Pie
-                data={riskDistributionData}
-                angleField="value"
-                colorField="type"
-                radius={0.9}
-                label={{
-                  type: 'outer',
-                  content: ({ type, value, percent }) =>
-                    `${type}: ${value} (${(percent * 100).toFixed(0)}%)`,
-                }}
-                tooltip={{
-                  formatter: (datum) => ({
-                    name: datum.type,
-                    value: datum.value,
-                  }),
-                }}
-                interactions={[{ type: "element-active" }]}
-              />
-            )}
-          </Card>
-        </Col>
+  </Card>
+</Col>
       </Row>
 
       <Card title="Prediction History" style={{ marginTop: 24 }}>

@@ -9,7 +9,7 @@ from bson import ObjectId
 
 # === Setup ===
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000"]}}, supports_credentials=True)
+CORS(app)
 
 # === Load Model ===
 try:
@@ -71,7 +71,14 @@ def generate_recommendations(prediction, disease_types, confidence):
             "Continue current medication regimen"
         ])
     return recommendations
-
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'model_loaded': model is not None,
+        'timestamp': datetime.now().isoformat()
+    })
 @app.route('/predict', methods=['POST'])
 def predict():
     try:

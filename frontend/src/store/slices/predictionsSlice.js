@@ -48,10 +48,17 @@ export const fetchPredictionStats = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const res = await predictionsAPI.getStats();
-      console.log("API Stats Response:", res.data); // 👈 Add this line
+
+      // Optional: Log response to debug
+      console.log("✅ API Stats Response:", res.data);
+
+      // Return the 'data' property which should contain riskDistribution
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Error fetching prediction stats");
+      console.error("❌ Failed to fetch stats:", err);
+      return rejectWithValue(
+        err.response?.data?.message || "Error fetching prediction stats"
+      );
     }
   }
 );
@@ -143,11 +150,12 @@ extraReducers: (builder) => {
       state.loading = true;
       state.error = null;
     })
- .addCase(fetchPredictionStats.fulfilled, (state, action) => {
+.addCase(fetchPredictionStats.fulfilled, (state, action) => {
   state.loading = false;
-  console.log("✅ Prediction Stats Payload:", action.payload); // <-- Add this!
+  console.log("✅ Prediction Stats Payload:", action.payload);
   state.stats = action.payload || {};
 })
+
     .addCase(fetchPredictionStats.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload;

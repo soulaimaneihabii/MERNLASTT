@@ -150,6 +150,7 @@ export const predictionsAPI = {
   getPredictions: (params) => api.get("/predictions", { params }),
   getPredictionHistory: (patientId) => api.get(`/predictions/patient/${patientId}`),
   getPredictionById: (id) => api.get(`/predictions/${id}`),
+  getStats: () => api.get("/predictions/stats"),
 }
 
 // Appointments API

@@ -2,6 +2,8 @@ import asyncHandler from "../middleware/asyncHandler.js"
 import Patient from "../models/Patient.model.js"
 import Prediction from "../models/Prediction.model.js"
 import aiService from "../services/ai.service.js"
+import mongoose from "mongoose";
+
 // import notificationService from "../services/notification.service.js"
 
 // @desc    Get all predictions
@@ -263,18 +265,21 @@ export const deletePrediction = asyncHandler(async (req, res) => {
 // @desc    Get prediction statistics (ALL predictions by risk type)
 export const getPredictionStats = asyncHandler(async (req, res) => {
   const isDoctor = req.user.role === "doctor";
-  const matchCondition = isDoctor ? { doctor: req.user.id } : {};
+  const matchCondition = isDoctor ? { doctor: new mongoose.Types.ObjectId(req.user.id) } : {};
 
- const raw = await Prediction.aggregate([
-  { $match: matchCondition },
-  {
-    $group: {
-      _id: { $toLower: "$result.risk" }, // 🔧 use lowercase for consistency
-      count: { $sum: 1 }
+  console.log("📊 Match condition for stats:", matchCondition);
+
+  const raw = await Prediction.aggregate([
+    { $match: matchCondition },
+    {
+      $group: {
+        _id: { $toLower: "$result.risk" },
+        count: { $sum: 1 }
+      }
     }
-  }
-])
-;
+  ]);
+
+  console.log("🛠 Raw aggregation result:", raw);
 
   const normalized = { high: 0, medium: 0, low: 0 };
   const map = {
@@ -300,6 +305,8 @@ export const getPredictionStats = asyncHandler(async (req, res) => {
     { _id: "low", count: normalized.low },
   ];
 
+  console.log("✅ Final risk distribution:", riskDistribution);
+
   res.status(200).json({
     success: true,
     data: {
@@ -308,4 +315,3 @@ export const getPredictionStats = asyncHandler(async (req, res) => {
     },
   });
 });
-
