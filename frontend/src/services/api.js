@@ -170,9 +170,12 @@ export const analyticsAPI = {
   getPatientsPerDoctor: () => api.get("/analytics/patients-per-doctor"),
   
  getDoctorDashboardStats: () => api.get("/analytics/doctor-dashboard")
-
-
-
 }
+export const scannedDocumentsAPI = {
+  extractAndStore: (data) => api.post("/documents/extract-fields", data),
+  getByPatientId: (patientId) => api.get(`/documents/by-patient/${patientId}`),
+  deleteById: (id) => api.delete(`/documents/${id}`),
+  getAll: () => api.get("/documents"),
+};
 
 export default api

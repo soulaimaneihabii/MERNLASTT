@@ -28,6 +28,7 @@ import patientRoutes from "./routes/patient.routes.js"
 import predictionRoutes from "./routes/prediction.routes.js"
 import analyticsRoutes from "./routes/analytics.routes.js"
 import aiRoutes from "./routes/ai.routes.js"
+import documentRoutes from "./routes/document.routes.js";
 // import reportsRoutes from "./routes/reports.routes.js"
 // import appointmentsRoutes from "./routes/appointments.routes.js"
 // import debugRoutes from "./routes/debug.routes.js"
@@ -153,6 +154,7 @@ app.use("/api/patients", patientRoutes)
 app.use("/api/predictions", predictionRoutes)
 app.use("/api/analytics", analyticsRoutes)
 app.use('/api/ai', aiRoutes);
+app.use("/api/documents", documentRoutes);
 // app.use("/api/reports", reportsRoutes)
 // app.use("/api/appointments", appointmentsRoutes)
 

@@ -5,7 +5,7 @@ import patientsSlice from "./slices/patientsSlice"
 import predictionsSlice from "./slices/predictionsSlice"
 import appointmentsSlice from "./slices/appointmentsSlice"
 import analyticsSlice from "./slices/analyticsSlice"
-
+import scannedDocumentsSlice from "./slices/scannedDocumentsSlice";
 export const store = configureStore({
   reducer: {
     auth: authSlice,
@@ -14,6 +14,8 @@ export const store = configureStore({
     predictions: predictionsSlice,
     appointments: appointmentsSlice,
     analytics:analyticsSlice,
+    scannedDocuments: scannedDocumentsSlice,
+
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

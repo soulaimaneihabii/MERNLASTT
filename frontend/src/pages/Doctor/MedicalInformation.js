@@ -38,6 +38,7 @@ import {
 import { fetchPatients, updatePatient } from "../../store/slices/patientsSlice"
 import { getAISuggestions } from "../../services/aiAssistantService";
 import { scanDocumentWithOCR } from "../../utils/ocrService";
+import { extractScannedData } from "../../store/slices/scannedDocumentsSlice";
 
 
 import dayjs from "dayjs"
@@ -63,7 +64,7 @@ const MedicalInformation = () => {
   const [newAllergy, setNewAllergy] = useState("")
   const [activeTab, setActiveTab] = useState("basic")
 const [aiLoading, setAiLoading] = useState(false);
-
+const [scannedDocs, setScannedDocs] = useState([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -185,12 +186,10 @@ const [aiLoading, setAiLoading] = useState(false);
   }
 };
 
-
-  const handleSaveMedicalInfo = async () => {
+const handleSaveMedicalInfo = async () => {
   try {
     const values = await form.validateFields();
 
-    // Construct correct patient object:
     const patientData = {
       firstName: values.firstName,
       lastName: values.lastName,
@@ -232,26 +231,63 @@ const [aiLoading, setAiLoading] = useState(false);
       medicalFiles: medicalFiles,
     };
 
-    // Dispatch update:
-    await dispatch(
-      updatePatient({
-        id: selectedPatient.id,
-        patientData,
-      }),
-    ).unwrap();
+    console.log("🧠 [Save Info] Dispatching updatePatient");
+    await dispatch(updatePatient({ id: selectedPatient.id, patientData })).unwrap();
+    console.log("✅ Patient update completed");
+
+    console.log("📁 [Save Info] Medical files to extract:", medicalFiles);
+
+    for (const doc of medicalFiles) {
+      console.log("📄 Processing file:", doc.name);
+
+      if (!doc.ocrText) {
+        console.warn("⛔ Skipping: No OCR text found for", doc.name);
+        continue;
+      }
+
+      const payload = {
+        patientId: selectedPatient.id,
+        file: {
+          uid: doc.uid,
+          name: doc.name,
+          type: doc.type,
+          ocrText: doc.ocrText,
+        },
+        fileTypeCategory: doc.fileTypeCategory || "resultat_analyse",
+        doctorId: user.id,
+        token,
+      };
+
+      console.log("📤 Dispatching extractScannedData:", payload);
+
+      try {
+        const result = await dispatch(extractScannedData(payload)).unwrap();
+        console.log("✅ Extracted and saved:", result);
+      } catch (err) {
+        console.error("❌ Failed to save scanned document:", doc.name, err);
+        notification.warning({
+          message: `Scan failed for ${doc.name}`,
+          description: err.message || "OCR extract dispatch failed",
+        });
+      }
+    }
 
     notification.success({
       message: "Success",
-      description: "Medical information saved successfully",
+      description: "Medical information and all extracted documents saved successfully.",
     });
 
   } catch (error) {
+    console.error("❌ Save failed:", error);
     notification.error({
       message: "Error",
-      description: error.message || "Failed to save medical information",
+      description: error.message || "Failed to save medical information.",
     });
   }
 };
+
+
+
 // const exportDSEFile = () => {
 //   if (!selectedPatient) {
 //     notification.warning({
@@ -292,45 +328,42 @@ const [aiLoading, setAiLoading] = useState(false);
 //     description: "Patient DSE file was exported successfully.",
 //   });
 // };
- const handleFileUpload = async ({ fileList: newFileList }) => {
+const handleFileUpload = async ({ fileList: newFileList }) => {
   setFileList(newFileList);
 
   const uploadedFiles = await Promise.all(
     newFileList.map(async (file) => {
       let ocrText = "";
+
       try {
-        notification.info({
-          message: "Scanning Document",
-          description: `Running OCR on ${file.name}...`,
-        });
-
         ocrText = await scanDocumentWithOCR(file);
-
-        notification.success({
-          message: "OCR Complete",
-          description: `Extracted text from ${file.name}`,
-        });
-
+        notification.success({ message: "OCR Complete", description: file.name });
       } catch (err) {
-        notification.error({
-          message: "OCR Failed",
-          description: `Failed to scan ${file.name}`,
-        });
+        notification.error({ message: "OCR Failed", description: file.name });
       }
 
-      return {
+      // ✅ Save locally, don't dispatch yet
+      const fileData = {
         uid: file.uid,
         name: file.name,
         type: file.type,
         size: file.size,
         url: file.response?.url || file.url,
         uploadDate: new Date().toISOString(),
-        ocrText: ocrText, // 🟢 Add scanned text here!
+        ocrText,
+        fileTypeCategory: "resultat_analyse", // TODO: Let doctor choose this
       };
+
+      return fileData;
     })
   );
 
-  setMedicalFiles(uploadedFiles);
+const updatedFiles = newFileList.map((file, idx) => ({
+  ...file,
+  ...uploadedFiles[idx],
+}));
+
+setMedicalFiles(updatedFiles);
 };
 
   const handleDeleteFile = (fileUid) => {
