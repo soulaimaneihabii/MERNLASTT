@@ -155,6 +155,7 @@ app.use("/api/predictions", predictionRoutes)
 app.use("/api/analytics", analyticsRoutes)
 app.use('/api/ai', aiRoutes);
 app.use("/api/documents", documentRoutes);
+
 // app.use("/api/reports", reportsRoutes)
 // app.use("/api/appointments", appointmentsRoutes)
 

@@ -5,8 +5,9 @@ import { Button, notification } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import axios from "axios";
 
-const PatientDSEExport = () => {
+const Exportpage = () => {
   const [patientData, setPatientData] = useState(null);
+  const [extractedDocs, setExtractedDocs] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -14,8 +15,15 @@ const PatientDSEExport = () => {
       try {
         const response = await axios.get("/api/patients/me");
         setPatientData(response.data);
+
+        const docRes = await axios.get(`/api/scanned-documents/by-patient/${response.data._id}`);
+        setExtractedDocs(docRes.data);
       } catch (error) {
         console.error("Failed to fetch patient data", error);
+        notification.error({
+          message: "Erreur",
+          description: "Impossible de récupérer les données du patient.",
+        });
       }
     };
 
@@ -25,8 +33,8 @@ const PatientDSEExport = () => {
   const exportDSE = () => {
     if (!patientData) {
       notification.error({
-        message: "No data",
-        description: "Patient data is not available.",
+        message: "Données manquantes",
+        description: "Les données du patient ne sont pas disponibles.",
       });
       return;
     }
@@ -48,12 +56,20 @@ const PatientDSEExport = () => {
         type: file.type,
         size: file.size,
       })) || [],
+      extractedDocuments: extractedDocs.map(doc => ({
+        fileName: doc.fileName,
+        category: doc.fileTypeCategory,
+        rawText: doc.rawText,
+        fields: doc.extractedFields,
+        createdAt: doc.createdAt,
+      })),
       exportDate: new Date().toISOString(),
     };
 
     const blob = new Blob([JSON.stringify(dseData, null, 2)], {
       type: "application/json",
     });
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -64,24 +80,24 @@ const PatientDSEExport = () => {
     URL.revokeObjectURL(url);
 
     notification.success({
-      message: "Export Successful",
-      description: "Your DSE file has been downloaded.",
+      message: "Export Réussi",
+      description: "Votre fichier DSE a été téléchargé.",
     });
   };
 
   return (
     <div style={{ padding: 24 }}>
-      <h1>📄 Export My DSE File</h1>
+      <h1>📄 Exporter Mon DSE (Dossier Santé Électronique)</h1>
       <Button
         type="primary"
         icon={<FileTextOutlined />}
         onClick={exportDSE}
         loading={loading}
       >
-        Export My DSE
+        Exporter le DSE
       </Button>
     </div>
   );
 };
 
-export default PatientDSEExport;
+export default Exportpage;

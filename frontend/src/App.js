@@ -13,7 +13,7 @@ import DoctorDashboard from "./pages/Doctor/DoctorDashboard";
 import MedicalInformation from "./pages/Doctor/MedicalInformation";
 import Predictions from "./pages/Doctor/Predictions";
 import PatientDashboard from "./pages/Patient/PatientDashboard";
-import PatientForm from "./pages/Patient/PatientForm";
+import Exportpage from "./pages/Patient/Exportpage";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import "./App.css";
 import EnhancedMedicalInformation from "./pages/Doctor/MedicalInformation";
@@ -126,7 +126,7 @@ const App = () => {
                   <ProtectedRoute allowedRoles={["patient", "doctor", "admin"]}>
                     <Routes>
                       <Route index element={<PatientDashboard />} />
-                      <Route path="form" element={<PatientForm />} />
+                      <Route path="form" element={<Exportpage />} />
                     </Routes>
                   </ProtectedRoute>
                 }

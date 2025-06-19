@@ -98,7 +98,7 @@ const Layout = () => {
           {
             key: "/patient/form",
             icon: <FileTextOutlined />,
-            label: "Medical Form",
+            label: "Exporte DSE File",
           },
         ];
       default:

@@ -43,6 +43,17 @@ export const extractScannedData = createAsyncThunk(
     }
   }
 );
+export const fetchScannedDocuments = createAsyncThunk(
+  "scannedDocuments/fetchByPatient",
+  async (patientId, thunkAPI) => {
+    try {
+      const response = await api.get(`/documents/by-patient/${patientId}`); // ✅ FIXED endpoint
+      return response.data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data?.message || "Failed to fetch scanned documents");
+    }
+  }
+);
 
 // Slice definition
 const scannedDocumentsSlice = createSlice({
@@ -66,6 +77,18 @@ const scannedDocumentsSlice = createSlice({
       .addCase(extractScannedData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Extraction failed";
+      })
+       .addCase(fetchScannedDocuments.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchScannedDocuments.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = action.payload;
+      })
+      .addCase(fetchScannedDocuments.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
