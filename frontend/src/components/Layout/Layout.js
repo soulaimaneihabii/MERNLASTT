@@ -53,18 +53,24 @@ const Layout = () => {
   const getMenuItems = () => {
     switch (user?.role) {
       case "admin":
-        return [
-          {
-            key: "/admin",
-            icon: <DashboardOutlined />,
-            label: "Global Dashboard",
-          },
-          {
-            key: "/admin/GestionUsers",
-            icon: <TeamOutlined />,
-            label: "Gestion Users",
-          },
-        ];
+  return [
+    {
+      key: "/admin",
+      icon: <DashboardOutlined />,
+      label: "Global Dashboard",
+    },
+    {
+      key: "/admin/GestionUsers",
+      icon: <TeamOutlined />,
+      label: "Gestion Users",
+    },
+    {
+      key: "/admin/predictions",
+      icon: <ExperimentOutlined />,
+      label: "All Predictions",
+    },
+  ];
+
       case "doctor":
         return [
           {

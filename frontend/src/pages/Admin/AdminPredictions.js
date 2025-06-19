@@ -37,11 +37,16 @@ const AdminPredictions = () => {
     dispatch(fetchPredictionStats());
   }, [dispatch]);
 
-  const filtered = predictions.filter((p) => {
-    const matchesSearch = `${p.patientName}`.toLowerCase().includes(search.toLowerCase());
-    const matchesRisk = riskFilter ? p.predictionResult.toLowerCase().includes(riskFilter.toLowerCase()) : true;
-    return matchesSearch && matchesRisk;
-  });
+const filtered = predictions.filter((p) => {
+  const patientName = `${p.patient?.firstName || ""} ${p.patient?.lastName || ""}`.toLowerCase();
+  const matchesSearch = patientName.includes(search.toLowerCase());
+
+  const risk = p.predictionResult?.toLowerCase() || "";
+  const matchesRisk = riskFilter ? risk.includes(riskFilter.toLowerCase()) : true;
+
+  return matchesSearch && matchesRisk;
+});
+
 
   const riskCounts = { high: 0, medium: 0, low: 0 };
   (stats.riskDistribution || []).forEach((item) => {
@@ -60,42 +65,43 @@ const AdminPredictions = () => {
     },
   ];
 
-  const columns = [
-    {
-      title: "Patient",
-      dataIndex: "patientName",
-      key: "patientName",
+ const columns = [
+  {
+    title: "Patient",
+    key: "patient",
+    render: (r) => `${r.patient?.firstName || ""} ${r.patient?.lastName || ""}`,
+  },
+  {
+    title: "Docteur",
+    key: "doctor",
+    render: (r) => r.doctor?.name || "N/A",
+  },
+  {
+    title: "Date",
+    dataIndex: "createdAt",
+    key: "createdAt",
+    render: (v) => new Date(v).toLocaleDateString(),
+  },
+  {
+    title: "Risque",
+    dataIndex: "predictionResult",
+    key: "predictionResult",
+    render: (r) => {
+      const val = r.toLowerCase();
+      if (val.includes("high")) return <Tag color="red">High</Tag>;
+      if (val.includes("medium") || val.includes("moderate")) return <Tag color="orange">Medium</Tag>;
+      if (val.includes("low")) return <Tag color="green">Low</Tag>;
+      return <Tag>Unknown</Tag>;
     },
-    {
-      title: "Docteur",
-      dataIndex: "doctorName",
-      key: "doctorName",
-    },
-    {
-      title: "Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (v) => new Date(v).toLocaleDateString(),
-    },
-    {
-      title: "Risque",
-      dataIndex: "predictionResult",
-      key: "predictionResult",
-      render: (r) => {
-        const val = r.toLowerCase();
-        if (val.includes("high")) return <Tag color="red">High</Tag>;
-        if (val.includes("medium") || val.includes("moderate")) return <Tag color="orange">Medium</Tag>;
-        if (val.includes("low")) return <Tag color="green">Low</Tag>;
-        return <Tag>Unknown</Tag>;
-      },
-    },
-    {
-      title: "Confiance",
-      dataIndex: "confidence",
-      key: "confidence",
-      render: (c) => `${(c * 100).toFixed(1)}%`,
-    },
-  ];
+  },
+  {
+    title: "Confiance",
+    dataIndex: "confidence",
+    key: "confidence",
+    render: (c) => `${(c * 100).toFixed(1)}%`,
+  },
+];
+
 
   return (
     <div>

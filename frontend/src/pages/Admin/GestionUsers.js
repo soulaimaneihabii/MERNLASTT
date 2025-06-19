@@ -91,16 +91,23 @@ const GestionUsers = () => {
     }
   }, [error, dispatch]);
 
-  const handleCreateUser = () => {
-    setEditingUser(null);
-    setSelectedRole(null);
-    setIsModalVisible(true);
-    form.resetFields();
-  };
+ const handleCreateUser = () => {
+  setEditingUser(null);
+  setIsModalVisible(true);
+  form.setFieldsValue({
+    name: "",
+    email: "",
+    password: "",
+    role: "doctor", // or "admin"
+    isActive: true,
+  });
+};
+
 
   const handleEditUser = async (user) => {
   setEditingUser(user);
   setIsModalVisible(true);
+setSelectedRole(user.role);
 
   try {
     const res = await dispatch(fetchPatientById(user._id)).unwrap();
@@ -314,15 +321,48 @@ const GestionUsers = () => {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="fullName" label="Full Name">
-            <Input disabled />
-          </Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
-  <Input disabled />
+  <Form.Item name="name" label="Full Name" rules={[{ required: true }]}>
+    <Input disabled={!!editingUser} />
+  </Form.Item>
+
+  <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+    <Input disabled={!!editingUser} />
+  </Form.Item>
+
+  <Form.Item name="password" label="Password" rules={[{ required: !editingUser, min: 6 }]}>
+    <Input.Password placeholder={editingUser ? "Leave blank to keep current" : "Enter password"} />
+  </Form.Item>
+
+<Form.Item name="role" label="Role" rules={[{ required: true }]}>
+  <Select onChange={(value) => setSelectedRole(value)}>
+ 
+    <Option value="admin">Admin</Option>
+    <Option value="doctor">Doctor</Option>
+  </Select>
 </Form.Item>
-          <Form.Item name="password" label="Password" rules={[{ min: 6 }]}> <Input.Password placeholder="Leave blank to keep current" /> </Form.Item>
-          <Form.Item name="isActive" label="Status" rules={[{ required: true }]}> <Select placeholder="Select status"> <Option value={true}>Active</Option> <Option value={false}>Inactive</Option> </Select> </Form.Item>
-        </Form>
+
+{selectedRole === "doctor" && (
+  <>
+    <Form.Item name="specialization" label="Specialization" rules={[{ required: true }]}>
+      <Input placeholder="Cardiologist, Neurologist, etc." />
+    </Form.Item>
+
+    <Form.Item name="licenseNumber" label="License Number" rules={[{ required: true }]}>
+      <Input placeholder="e.g. LIC-123456" />
+    </Form.Item>
+  </>
+)}
+
+
+
+  <Form.Item name="isActive" label="Status" rules={[{ required: true }]}>
+    <Select>
+      <Option value={true}>Active</Option>
+      <Option value={false}>Inactive</Option>
+    </Select>
+  </Form.Item>
+</Form>
+
       </Modal>
     </div>
   );

@@ -16,14 +16,14 @@ import PatientDashboard from "./pages/Patient/PatientDashboard";
 import Exportpage from "./pages/Patient/Exportpage";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import "./App.css";
-import EnhancedMedicalInformation from "./pages/Doctor/MedicalInformation";
+
 import PatientAccountCreation from "./pages/Doctor/PatientAccountCreation";
 import PatientMedicalInfo from "./pages/Doctor/PatientMedicalInfo";
 import PatientDetailsPage from "../src/pages/Doctor/PatientDetailsPage";
 import MyPatients from "./pages/Doctor/MyPatients";
 import Profile from "../src/components/Layout/Profile";
 import Settings from "../src/components/Layout/Settings";
-
+import AdminPredictionsPage from "./pages/Admin/AdminPredictions";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -96,6 +96,7 @@ const App = () => {
                     <Routes>
                       <Route index element={<GestionGlobale />} />
                       <Route path="GestionUsers" element={<GestionUsers />} />
+                         <Route path="predictions" element={<AdminPredictionsPage />} />
                     </Routes>
                   </ProtectedRoute>
                 }
