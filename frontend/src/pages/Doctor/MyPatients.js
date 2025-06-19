@@ -247,7 +247,12 @@ const MyPatients = () => {
         <Form form={form} layout="vertical" onFinish={handleEditSubmit}>
           <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="birthDate" label="Birth Date" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+         <Form.Item name="birthDate" label="Birth Date" rules={[{ required: true }]}>
+  <DatePicker
+    style={{ width: '100%' }}
+    disabledDate={(current) => current && current > moment().endOf('day')}
+  />
+</Form.Item>
           <Form.Item name="gender" label="Gender" rules={[{ required: true }]}><Select><Option value="male">Male</Option><Option value="female">Female</Option><Option value="other">Other</Option></Select></Form.Item>
           <Form.Item name="status" label="Status" rules={[{ required: true }]}><Select><Option value="active">Active</Option><Option value="inactive">Inactive</Option></Select></Form.Item>
         </Form>
