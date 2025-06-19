@@ -3,7 +3,7 @@
 
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Card, Row, Col, Typography, Table } from 'antd'
+import { Card, Row, Col, Typography, Table, Tag } from 'antd'
 import { FiUsers, FiAlertTriangle, FiUserPlus } from 'react-icons/fi'
 import Chart from 'react-apexcharts'
 import { fetchPatients } from '../../store/slices/patientsSlice'
@@ -36,14 +36,14 @@ const DoctorDashboard = () => {
 
   const riskDistribution = dashboardStats?.riskDistribution || []
   const recentPredictions = dashboardStats?.recentActivity || []
-
-  const topPatients = recentPredictions.map(pred => ({
-    _id: pred._id,
-    firstName: pred.patient?.firstName || "",
-    lastName: pred.patient?.lastName || "",
-    latestRisk: pred.confidence || 0,
-    riskHistory: [{ score: pred.confidence }]
-  }))
+const topPatients = recentPredictions.map(pred => ({
+  _id: pred._id,
+  firstName: pred.patient?.firstName || "",
+  lastName: pred.patient?.lastName || "",
+  latestRiskLabel: pred.predictionResult || "Unknown",
+  latestRiskScore: pred.confidence || 0,
+  riskHistory: [{ score: pred.confidence }]
+}))
 
   const riskCounts = { high: 0, medium: 0, low: 0 }
   riskDistribution.forEach((item) => {
@@ -136,7 +136,20 @@ const DoctorDashboard = () => {
             <Table
               columns={[
                 { title: 'Name', key: 'name', render: (r) => `${r.firstName} ${r.lastName}` },
-                { title: 'Latest Risk', key: 'latestRisk', render: (r) => <RiskTag score={r.latestRisk} /> },
+               {
+  title: 'Latest Risk',
+  key: 'latestRisk',
+  render: (r) => (
+    <Tag color={
+      r.latestRiskLabel.toLowerCase().includes('high') ? 'red' :
+      r.latestRiskLabel.toLowerCase().includes('moderate') ? 'orange' :
+      r.latestRiskLabel.toLowerCase().includes('low') ? 'green' : 'gray'
+    }>
+      {r.latestRiskLabel}
+    </Tag>
+  )
+}
+,
                 { title: 'Trend', key: 'trend', render: (r) => <RiskSparkline data={r.riskHistory || []} width={100} height={30} /> }
               ]}
               dataSource={topPatients}
