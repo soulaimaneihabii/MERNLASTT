@@ -104,31 +104,31 @@ const GestionUsers = () => {
 };
 
 
-  const handleEditUser = async (user) => {
+const handleEditUser = async (user) => {
   setEditingUser(user);
   setIsModalVisible(true);
-setSelectedRole(user.role);
+  setSelectedRole(user.role);
 
   try {
-    const res = await dispatch(fetchPatientById(user._id)).unwrap();
-
-    const fullName = `${res.firstName || ""} ${res.lastName || ""}`;
-    const email = user?.email || res?.email || "";
-    const status = user?.isActive ?? true;
-
+    form.resetFields();
     form.setFieldsValue({
-      fullName,
-      email,
-      password: "", // always blank for security
-      isActive: status,
+      name: user?.name || "",
+      email: user?.email || "",
+      password: "",
+      role: user?.role || "",
+      specialization: user?.specialization || "",
+      licenseNumber: user?.licenseNumber || "",
+      isActive: user?.isActive ?? true,
     });
   } catch (e) {
     notification.error({
       message: "Error",
-      description: "Failed to load patient info",
+      description: e.message || "Failed to load user info",
     });
   }
 };
+
+
 
 
   const handleDeleteUser = async (userId) => {
@@ -312,58 +312,55 @@ setSelectedRole(user.role);
         </TabPane>
       </Tabs>
 
-      <Modal
-        title={editingUser ? "Edit Patient Info" : "Create Doctor/Admin"}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        confirmLoading={loading}
-        width={600}
-      >
-        <Form form={form} layout="vertical">
-  <Form.Item name="name" label="Full Name" rules={[{ required: true }]}>
-    <Input disabled={!!editingUser} />
-  </Form.Item>
-
-  <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
-    <Input disabled={!!editingUser} />
-  </Form.Item>
-
-  <Form.Item name="password" label="Password" rules={[{ required: !editingUser, min: 6 }]}>
-    <Input.Password placeholder={editingUser ? "Leave blank to keep current" : "Enter password"} />
-  </Form.Item>
-
-<Form.Item name="role" label="Role" rules={[{ required: true }]}>
-  <Select onChange={(value) => setSelectedRole(value)}>
- 
-    <Option value="admin">Admin</Option>
-    <Option value="doctor">Doctor</Option>
-  </Select>
-</Form.Item>
-
-{selectedRole === "doctor" && (
-  <>
-    <Form.Item name="specialization" label="Specialization" rules={[{ required: true }]}>
-      <Input placeholder="Cardiologist, Neurologist, etc." />
+    
+<Modal
+  title={editingUser ? "Edit Patient Info" : "Create Doctor/Admin"}
+  open={isModalVisible}
+  onOk={handleModalOk}
+  onCancel={handleModalCancel}
+  confirmLoading={loading}
+  width={600}
+>
+  <Form form={form} layout="vertical">
+    <Form.Item name="name" label="Full Name" rules={[{ required: true }]}> 
+      <Input disabled={!!editingUser} />
     </Form.Item>
 
-    <Form.Item name="licenseNumber" label="License Number" rules={[{ required: true }]}>
-      <Input placeholder="e.g. LIC-123456" />
+    <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}> 
+      <Input disabled={!!editingUser} />
     </Form.Item>
-  </>
-)}
 
+    <Form.Item name="password" label="Password" rules={[{ required: !editingUser, min: 6 }]}> 
+      <Input.Password placeholder={editingUser ? "Leave blank to keep current" : "Enter password"} />
+    </Form.Item>
 
+    <Form.Item name="role" label="Role" rules={[{ required: true }]}> 
+      <Select onChange={(value) => setSelectedRole(value)} disabled={!!editingUser}>
+        <Option value="admin">Admin</Option>
+        <Option value="doctor">Doctor</Option>
+      </Select>
+    </Form.Item>
 
-  <Form.Item name="isActive" label="Status" rules={[{ required: true }]}>
-    <Select>
-      <Option value={true}>Active</Option>
-      <Option value={false}>Inactive</Option>
-    </Select>
-  </Form.Item>
-</Form>
+    {selectedRole === "doctor" && (
+      <>
+        <Form.Item name="specialization" label="Specialization" rules={[{ required: true }]}> 
+          <Input placeholder="Cardiologist, Neurologist, etc." disabled={!!editingUser} />
+        </Form.Item>
 
-      </Modal>
+        <Form.Item name="licenseNumber" label="License Number" rules={[{ required: true }]}> 
+          <Input placeholder="e.g. LIC-123456" disabled={!!editingUser} />
+        </Form.Item>
+      </>
+    )}
+
+    <Form.Item name="isActive" label="Status" rules={[{ required: true }]}> 
+      <Select>
+        <Option value={true}>Active</Option>
+        <Option value={false}>Inactive</Option>
+      </Select>
+    </Form.Item>
+  </Form>
+</Modal>
     </div>
   );
 };

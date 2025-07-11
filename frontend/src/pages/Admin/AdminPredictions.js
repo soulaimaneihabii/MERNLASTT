@@ -36,13 +36,21 @@ const AdminPredictions = () => {
     dispatch(fetchPredictions({ doctorId: "all" }));
     dispatch(fetchPredictionStats());
   }, [dispatch]);
+const normalizeRisk = (risk) => {
+  if (!risk || typeof risk !== "string") return "";
+  const value = risk.toLowerCase();
+  if (["moderate", "meduim", "mid"].includes(value)) return "medium";
+  return value;
+};
 
 const filtered = predictions.filter((p) => {
   const patientName = `${p.patient?.firstName || ""} ${p.patient?.lastName || ""}`.toLowerCase();
   const matchesSearch = patientName.includes(search.toLowerCase());
 
-  const risk = p.predictionResult?.toLowerCase() || "";
-  const matchesRisk = riskFilter ? risk.includes(riskFilter.toLowerCase()) : true;
+  const risk = normalizeRisk(p.predictionResult);
+const selectedRisk = normalizeRisk(riskFilter);
+const matchesRisk = selectedRisk ? risk === selectedRisk : true;
+
 
   return matchesSearch && matchesRisk;
 });

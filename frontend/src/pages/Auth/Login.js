@@ -155,11 +155,7 @@ const Login = () => {
             © {new Date().getFullYear()} MedApp. All rights reserved.
           </div>
 
-          {process.env.NODE_ENV === "development" && (
-            <div className="debug-info">
-              Debug: isAuth={isAuthenticated ? "true" : "false"}, user={user ? user.role : "null"}
-            </div>
-          )}
+          
         </Space>
       </Card>
 
