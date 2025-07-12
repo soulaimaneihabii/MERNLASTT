@@ -194,6 +194,7 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 // @desc    Delete user
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
+// DELETE /api/users/:id
 export const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
@@ -202,29 +203,32 @@ export const deleteUser = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  if (user._id.toString() === req.user.id) {
-    res.status(400);
-    throw new Error("You cannot delete your own account");
+  // Handle DOCTOR deletion: must delete all their patients and predictions
+  if (user.role === "doctor") {
+    const patients = await Patient.find({ doctor: user._id });
+
+    for (const patient of patients) {
+      // Delete predictions of this patient
+      await Prediction.deleteMany({ patient: patient._id });
+
+      // Delete patient
+      await patient.deleteOne();
+    }
+
+    console.log(`Deleted ${patients.length} patients and their predictions`);
   }
 
-  const patientCount = await Patient.countDocuments({ doctor: user._id });
-  const predictionCount = await Prediction.countDocuments({ doctor: user._id });
+  // TODO: You can add similar logic for ADMIN if needed
 
-  if (patientCount > 0 || predictionCount > 0) {
-    res.status(400);
-    throw new Error(
-      `Cannot delete user. User has ${patientCount} patients and ${predictionCount} predictions. Please reassign or archive them first.`
-    );
-  }
-
+  // Finally, delete the user
   await user.deleteOne();
 
   res.status(200).json({
     success: true,
-    data: {},
-    message: "User deleted successfully",
+    message: "User deleted successfully, along with related patients/predictions",
   });
 });
+
 
 // @desc    Get user statistics
 // @route   GET /api/users/stats

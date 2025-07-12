@@ -35,7 +35,7 @@ import {
   deleteUser,
   clearError,
 } from "../../store/slices/usersSlice";
-import { fetchPatients, fetchPatientById } from "../../store/slices/patientsSlice";
+import { fetchPatients, fetchPatientById,deletePatient  } from "../../store/slices/patientsSlice";
 import SystemInfo from "./SystemInfo";
 
 const { Title } = Typography;
@@ -189,19 +189,46 @@ const handleEditUser = async (user) => {
       key: "isActive",
       render: (isActive) => <Tag color={isActive ? "green" : "red"}>{isActive ? "ACTIVE" : "INACTIVE"}</Tag>,
     },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditUser(record)}>Edit</Button>
-          <Popconfirm title="Are you sure you want to delete this user?" onConfirm={() => handleDeleteUser(record.id)} okText="Yes" cancelText="No">
-            <Button type="link" danger icon={<DeleteOutlined />}>Delete</Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+     {
+    title: "Actions",
+    key: "actions",
+    render: (text, record) => (
+      <Space>
+        <Button
+          type="link"
+          icon={<EditOutlined />}
+          onClick={() => console.log("Edit", record)}
+        >
+          Edit
+        </Button>
+        <Popconfirm
+          title="Are you sure to delete this user?"
+          onConfirm={async () => {
+            console.log("Delete clicked", record._id);
+            try {
+              await dispatch(deleteUser(record._id)).unwrap();
+              notification.success({
+                message: "User deleted",
+                description: `${record.name} deleted successfully`,
+              });
+            } catch (err) {
+              notification.error({
+                message: "Delete failed",
+                description: err.message || "Something went wrong",
+              });
+            }
+          }}
+          okText="Yes"
+          cancelText="No"
+        >
+          <Button type="link" icon={<DeleteOutlined />} danger>
+            Delete
+          </Button>
+        </Popconfirm>
+      </Space>
+    ),
+  },
+];
 
   const patientColumns = [
     {
@@ -233,20 +260,47 @@ const handleEditUser = async (user) => {
       key: "status",
       render: (status) => <Tag color={status === "active" ? "green" : "orange"}>{status?.toUpperCase()}</Tag>,
     },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditUser(record)}>Edit</Button>
-          <Popconfirm title="Are you sure you want to delete this user?" onConfirm={() => handleDeleteUser(record.id)} okText="Yes" cancelText="No">
-            <Button type="link" danger icon={<DeleteOutlined />}>Delete</Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
+     {
+    title: "Actions",
+    key: "actions",
+    render: (text, record) => (
+      <Space>
+        <Button
+          type="link"
+          icon={<EditOutlined />}
+          onClick={() => console.log("Edit clicked for", record)}
+        >
+          Edit
+        </Button>
+        <Popconfirm
+          title="Are you sure to delete this patient?"
+          onConfirm={async () => {
+            console.log("Delete clicked", record._id); // ✅ Debug log
+            try {
+              await dispatch(deletePatient(record._id)).unwrap();
+              notification.success({
+                message: "Patient deleted",
+                description: `${record.firstName} ${record.lastName} was deleted.`,
+              });
+            } catch (err) {
+              console.error("Delete error", err);
+              notification.error({
+                message: "Delete failed",
+                description: err?.message || "Something went wrong",
+              });
+            }
+          }}
+          okText="Yes"
+          cancelText="No"
+        >
+          <Button type="link" icon={<DeleteOutlined />} danger>
+            Delete
+          </Button>
+        </Popconfirm>
+      </Space>
+    ),
+  },
+];
   const doctorCount = users.filter((u) => u?.role === "doctor").length;
   const adminCount = users.filter((u) => u?.role === "admin").length;
   const patientCount = patients.length;

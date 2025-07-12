@@ -97,17 +97,15 @@ export const updatePatient = createAsyncThunk(
 );
 
 // Delete patient
-export const deletePatient = createAsyncThunk(
-  "patients/deletePatient",
-  async (patientId, { rejectWithValue }) => {
-    try {
-      await patientsAPI.deletePatient(patientId);
-      return patientId;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to delete patient");
-    }
+export const deletePatient = createAsyncThunk("patients/delete", async (id, thunkAPI) => {
+  try {
+    const res = await patientsAPI.deletePatient(id);
+    return res.data;
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to delete patient");
   }
-);
+});
+
 
 const patientsSlice = createSlice({
   name: "patients",
@@ -222,9 +220,9 @@ const patientsSlice = createSlice({
 })
 
       // Delete patient
-      .addCase(deletePatient.fulfilled, (state, action) => {
-        state.patients = state.patients.filter((patient) => patient.id !== action.payload);
-      })
+       .addCase(deletePatient.fulfilled, (state, action) => {
+      state.patients = state.patients.filter(p => p._id !== action.meta.arg);
+    })
       .addCase(deletePatient.rejected, (state, action) => {
         state.error = action.payload;
       });
