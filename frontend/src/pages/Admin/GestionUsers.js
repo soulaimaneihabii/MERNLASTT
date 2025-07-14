@@ -35,7 +35,7 @@ import {
   deleteUser,
   clearError,
 } from "../../store/slices/usersSlice";
-import { fetchPatients, fetchPatientById,deletePatient  } from "../../store/slices/patientsSlice";
+import { fetchPatients, fetchPatientById,deletePatient,updatePatient  } from "../../store/slices/patientsSlice";
 import SystemInfo from "./SystemInfo";
 
 const { Title } = Typography;
@@ -104,29 +104,22 @@ const GestionUsers = () => {
 };
 
 
-const handleEditUser = async (user) => {
+const handleEditUser = (user) => {
   setEditingUser(user);
-  setIsModalVisible(true);
   setSelectedRole(user.role);
+  setIsModalVisible(true);
 
-  try {
-    form.resetFields();
-    form.setFieldsValue({
-      name: user?.name || "",
-      email: user?.email || "",
-      password: "",
-      role: user?.role || "",
-      specialization: user?.specialization || "",
-      licenseNumber: user?.licenseNumber || "",
-      isActive: user?.isActive ?? true,
-    });
-  } catch (e) {
-    notification.error({
-      message: "Error",
-      description: e.message || "Failed to load user info",
-    });
-  }
+  form.setFieldsValue({
+    name: user.name || "",
+    email: user.email || "",
+    password: "", // Optional: leave blank for editing
+    role: user.role || "",
+    specialization: user.specialization || "",
+    licenseNumber: user.licenseNumber || "",
+    isActive: user.isActive ?? true,
+  });
 };
+
 
 
 
@@ -144,7 +137,7 @@ const handleEditUser = async (user) => {
     try {
       const values = await form.validateFields();
       if (editingUser) {
-        await dispatch(updateUser({ id: editingUser.id, userData: values })).unwrap();
+       await dispatch(updateUser({ id: editingUser._id, userData: values })).unwrap();
         notification.success({ message: "Success", description: "User updated successfully" });
       } else {
         await dispatch(createUser(values)).unwrap();
@@ -194,13 +187,13 @@ const handleEditUser = async (user) => {
     key: "actions",
     render: (text, record) => (
       <Space>
-        <Button
-          type="link"
-          icon={<EditOutlined />}
-          onClick={() => console.log("Edit", record)}
-        >
-          Edit
-        </Button>
+      <Button
+  type="link"
+  icon={<EditOutlined />}
+  onClick={() => handleEditUser(record)}
+>
+  Edit
+</Button>
         <Popconfirm
           title="Are you sure to delete this user?"
           onConfirm={async () => {
@@ -229,7 +222,31 @@ const handleEditUser = async (user) => {
     ),
   },
 ];
+const [editPatientForm] = Form.useForm();
+const [isPatientModalVisible, setIsPatientModalVisible] = useState(false);
+const [editingPatient, setEditingPatient] = useState(null);
+const handlePatientUpdate = async () => {
+  try {
+    const values = await editPatientForm.validateFields();
+    await dispatch(updatePatient({
+      id: editingPatient._id,
+      updatedPatientData: values
+    })).unwrap();
 
+    notification.success({
+      message: "Patient Updated",
+      description: `${values.firstName} ${values.lastName} has been updated.`,
+    });
+
+    setIsPatientModalVisible(false);
+    setEditingPatient(null);
+  } catch (error) {
+    notification.error({
+      message: "Update Failed",
+      description: error.message || "Could not update patient",
+    });
+  }
+};
   const patientColumns = [
     {
       title: "Patient Name",
@@ -268,7 +285,17 @@ const handleEditUser = async (user) => {
         <Button
           type="link"
           icon={<EditOutlined />}
-          onClick={() => console.log("Edit clicked for", record)}
+          onClick={() => {
+  setEditingPatient(record);
+  setIsPatientModalVisible(true);
+  editPatientForm.setFieldsValue({
+    firstName: record.firstName,
+    lastName: record.lastName,
+    email: record.email,
+    age: record.age,
+    status: record.status,
+  });
+}}
         >
           Edit
         </Button>
@@ -411,6 +438,38 @@ const handleEditUser = async (user) => {
       <Select>
         <Option value={true}>Active</Option>
         <Option value={false}>Inactive</Option>
+      </Select>
+    </Form.Item>
+  </Form>
+</Modal>
+<Modal
+  title="Edit Patient"
+  open={isPatientModalVisible}
+  onOk={handlePatientUpdate}
+  onCancel={() => {
+    setIsPatientModalVisible(false);
+    setEditingPatient(null);
+  }}
+  okText="Update"
+  cancelText="Cancel"
+>
+  <Form form={editPatientForm} layout="vertical">
+    <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
+      <Input />
+    </Form.Item>
+    <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
+      <Input />
+    </Form.Item>
+    <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+      <Input disabled />
+    </Form.Item>
+    <Form.Item name="age" label="Age" rules={[{ required: true, type: "number", min: 0 }]}>
+      <Input type="number" />
+    </Form.Item>
+    <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+      <Select>
+        <Option value="active">Active</Option>
+        <Option value="inactive">Inactive</Option>
       </Select>
     </Form.Item>
   </Form>
