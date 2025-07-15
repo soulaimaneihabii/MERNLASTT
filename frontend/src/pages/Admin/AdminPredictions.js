@@ -77,7 +77,7 @@ const matchesRisk = selectedRisk ? risk === selectedRisk : true;
   {
     title: "Patient",
     key: "patient",
-    render: (r) => `${r.patient?.firstName || ""} ${r.patient?.lastName || ""}`,
+    render: (record) => record.doctor?.name || <Tag color="default">Deleted</Tag>
   },
   {
     title: "Docteur",

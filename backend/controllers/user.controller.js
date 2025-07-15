@@ -203,24 +203,20 @@ export const deleteUser = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Handle DOCTOR deletion: must delete all their patients and predictions
   if (user.role === "doctor") {
     const patients = await Patient.find({ doctor: user._id });
 
     for (const patient of patients) {
-      // Delete predictions of this patient
       await Prediction.deleteMany({ patient: patient._id });
-
-      // Delete patient
       await patient.deleteOne();
     }
+
+    // 🆕 Delete predictions directly linked to the doctor
+    await Prediction.deleteMany({ doctor: user._id });
 
     console.log(`Deleted ${patients.length} patients and their predictions`);
   }
 
-  // TODO: You can add similar logic for ADMIN if needed
-
-  // Finally, delete the user
   await user.deleteOne();
 
   res.status(200).json({
